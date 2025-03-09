@@ -6,10 +6,12 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { usePoints } from '@/app/contexts/PointsContext';
+import { useWallet } from '@/app/contexts/WalletContext';
 
 export default function Header() {
-  const { login, logout, authenticated, user } = usePrivy();
+  const { authenticated } = usePrivy();
   const { balance, loading: pointsLoading, refreshBalance } = usePoints();
+  const { shortAddress, walletConnected, connectWallet, disconnectWallet } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -76,7 +78,7 @@ export default function Header() {
           
           {/* Auth Section */}
           <div className="flex items-center">
-            {authenticated ? (
+            {walletConnected ? (
               <div className="flex items-center space-x-4 relative">
                 {/* Points Display */}
                 <motion.div 
@@ -94,7 +96,7 @@ export default function Header() {
                   onClick={handleAddressClick} 
                   className="bg-transparent border border-neon-pink rounded-full px-3 py-1 text-white text-sm hover:bg-neon-pink/10 transition-colors duration-200"
                 >
-                  {user?.wallet?.address?.slice(0, 6)}...{user?.wallet?.address?.slice(-4)} ▼
+                  {shortAddress} ▼
                 </button>
                 
                 {/* User Dropdown Menu */}
@@ -109,7 +111,7 @@ export default function Header() {
                     </Link>
                     <button 
                       onClick={() => {
-                        logout();
+                        disconnectWallet();
                         setShowUserMenu(false);
                       }} 
                       className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-neon-pink/20 transition-colors"
@@ -121,7 +123,7 @@ export default function Header() {
               </div>
             ) : (
               <button 
-                onClick={login} 
+                onClick={connectWallet} 
                 className="arcade-button-green"
               >
                 CONNECT

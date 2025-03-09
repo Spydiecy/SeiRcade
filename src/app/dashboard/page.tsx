@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useGameRoom, GameType, RoomType, RoomStatus } from '@/hooks/useGameRoom';
+import { useGameRoom } from '@/hooks/useGameRoom';
 import { useStatisticsTracker } from '@/hooks/useStatisticsTracker';
 import { usePoints } from '@/app/contexts/PointsContext';
+import { useWallet } from '@/app/contexts/WalletContext';
 
 export default function DashboardPage() {
-  const { ready, authenticated, user, login } = usePrivy();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'wallet' | 'rooms' | 'stats'>('wallet');
+  
+  // Use wallet context
+  const { walletConnected, connectWallet } = useWallet();
   
   // Use points context
   const { 
@@ -45,7 +47,7 @@ export default function DashboardPage() {
 
   // Initialize dashboard data
   useEffect(() => {
-    if (authenticated && user) {
+    if (walletConnected) {
       const loadData = async () => {
         try {
           setIsLoading(true);
@@ -62,7 +64,7 @@ export default function DashboardPage() {
     } else {
       setIsLoading(false);
     }
-  }, [authenticated, user, refreshBalance]);
+  }, [walletConnected, refreshBalance]);
 
   // Show notification
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -115,7 +117,7 @@ export default function DashboardPage() {
   };
 
   // If not authenticated, show login screen
-  if (!authenticated) {
+  if (!walletConnected) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-game-bg bg-cover bg-center">
         <div className="w-full max-w-md p-8 space-y-8 bg-black/60 backdrop-blur-sm rounded-xl border border-neon-blue">
@@ -125,7 +127,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-8">
             <button
-              onClick={() => login()}
+              onClick={connectWallet}
               className="w-full arcade-button-green"
             >
               CONNECT WALLET

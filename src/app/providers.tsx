@@ -4,6 +4,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import {defineChain} from 'viem';
 import { useEffect, useState } from 'react';
 import { PointsProvider } from './contexts/PointsContext';
+import { WalletProvider } from './contexts/WalletContext';
 
 export const coreTestnet = defineChain({
   id: 1115,
@@ -43,9 +44,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         supportedChains: [coreTestnet],
       }}
     >
-      <PointsProvider>
-        {children}
-      </PointsProvider>
+      <WalletProvider>
+        <PointsProvider>
+          {children}
+        </PointsProvider>
+      </WalletProvider>
     </PrivyProvider>
   );
 } 
