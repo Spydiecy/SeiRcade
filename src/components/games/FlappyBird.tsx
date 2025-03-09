@@ -31,11 +31,11 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
   });
 
   // Game constants
-  const GRAVITY = 0.35;
-  const FLAP_POWER = -6.5;
-  const PIPE_SPEED = 1.5;
-  const PIPE_SPAWN_INTERVAL = 2500;
-  const PIPE_GAP = 180;
+  const GRAVITY = 0.2;
+  const FLAP_POWER = -5;
+  const PIPE_SPEED = 1;
+  const PIPE_SPAWN_INTERVAL = 3500;
+  const PIPE_GAP = 230;
   const PIPE_WIDTH = 80;
 
   // Game variables
@@ -77,23 +77,31 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
       const sound = audioRef.current[type];
       
       if (sound) {
-        // Reset the audio to the beginning
-        sound.pause();
-        sound.currentTime = 0;
-        sound.volume = volume;
-        
-        // Play the sound with error handling
-        const playPromise = sound.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => console.log(`${type} sound played`))
-            .catch(err => console.warn(`Error playing ${type} sound:`, err));
-        }
-      } else {
-        console.warn(`Sound ${type} not loaded, cannot play`);
+        // Create a new promise for playing
+        const playAttempt = async () => {
+          try {
+            // Reset the audio
+            sound.currentTime = 0;
+            sound.volume = volume;
+            
+            // Try to play the sound
+            const playPromise = sound.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+              console.log(`${type} sound played successfully`);
+            }
+          } catch (error) {
+            console.warn(`Error playing ${type} sound:`, error);
+            // Try to recover by reinitializing the audio
+            sound.load();
+          }
+        };
+
+        // Execute the play attempt
+        playAttempt();
       }
     } catch (error) {
-      console.warn(`Error playing ${type} sound:`, error);
+      console.warn(`Error in playSoundEffect for ${type}:`, error);
     }
   };
 
@@ -102,20 +110,89 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     // Load audio files
     const loadAudio = () => {
       try {
-        audioRef.current = {
-          start: new Audio('/sounds/start.wav'),
-          score: new Audio('/sounds/score.wav'),
-          crash: new Audio('/sounds/crash.wav')
-        };
-        
-        // Set volume
-        Object.values(audioRef.current).forEach(audio => {
-          if (audio) audio.volume = 0.5;
+        // Create audio elements
+        const startAudio = document.createElement('audio');
+        const scoreAudio = document.createElement('audio');
+        const crashAudio = document.createElement('audio');
+
+        // Configure audio elements
+        [startAudio, scoreAudio, crashAudio].forEach(audio => {
+          audio.preload = 'auto';
+          // Add crossOrigin for better error handling
+          audio.crossOrigin = 'anonymous';
         });
-        
-        console.log("Audio loaded successfully");
+
+        // Define audio paths
+        const basePath = window.location.origin;
+        const audioFiles = {
+          start: `${basePath}/sounds/start.wav`,
+          score: `${basePath}/sounds/score.wav`,
+          crash: `${basePath}/sounds/crash.wav`
+        };
+
+        // Log paths for debugging
+        console.log('Audio file paths:', audioFiles);
+
+        // Set sources with full paths
+        startAudio.src = audioFiles.start;
+        scoreAudio.src = audioFiles.score;
+        crashAudio.src = audioFiles.crash;
+
+        // Store references
+        audioRef.current = {
+          start: startAudio,
+          score: scoreAudio,
+          crash: crashAudio
+        };
+
+        // Add load event listeners with better error handling
+        const loadPromises = [startAudio, scoreAudio, crashAudio].map(
+          (audio, index) => {
+            return new Promise((resolve, reject) => {
+              const name = ['start', 'score', 'crash'][index];
+              
+              audio.addEventListener('canplaythrough', () => {
+                console.log(`${name} sound loaded successfully from ${audio.src}`);
+                resolve(audio);
+              }, { once: true });
+
+              audio.addEventListener('error', (e: Event) => {
+                const error = e.target as HTMLAudioElement;
+                console.error(`Error loading ${name} sound from ${audio.src}:`, {
+                  error: error.error,
+                  networkState: error.networkState,
+                  readyState: error.readyState
+                });
+                reject(new Error(`Failed to load ${name} sound`));
+              }, { once: true });
+
+              // Start loading with timeout
+              const timeoutId = setTimeout(() => {
+                reject(new Error(`Timeout loading ${name} sound`));
+              }, 5000); // 5 second timeout
+
+              audio.addEventListener('loadeddata', () => {
+                clearTimeout(timeoutId);
+              }, { once: true });
+
+              audio.load();
+            });
+          }
+        );
+
+        // Wait for all sounds to load
+        Promise.all(loadPromises)
+          .then(() => {
+            console.log('All audio files loaded successfully');
+          })
+          .catch((error) => {
+            console.error('Error loading audio files:', error);
+            setLoadingError('Failed to load game sounds');
+          });
+
       } catch (error) {
-        console.error("Failed to load audio:", error);
+        console.error('Failed to initialize audio:', error);
+        setLoadingError('Failed to initialize game sounds');
       }
     };
 
