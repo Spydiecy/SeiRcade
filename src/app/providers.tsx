@@ -3,6 +3,7 @@
 import { PrivyProvider } from '@privy-io/react-auth';
 import {defineChain} from 'viem';
 import { useEffect, useState } from 'react';
+import { PointsProvider } from './contexts/PointsContext';
 
 export const coreTestnet = defineChain({
   id: 1115,
@@ -29,11 +30,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <PrivyProvider
       appId="cm81bj6ce0093zs43wrr4cizm"
       config={{
-        loginMethods: ['wallet', 'email', 'google'],
+        loginMethods: ['email', 'wallet'],
         appearance: {
           theme: 'dark',
-          accentColor: '#00f3ff',
-          logo: 'https://your-site.com/logo.png',
+          accentColor: '#FF10F0',
+          logo: 'https://corecade.vercel.app/corecade-logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
@@ -42,7 +43,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         supportedChains: [coreTestnet],
       }}
     >
-      {children}
+      <PointsProvider>
+        {children}
+      </PointsProvider>
     </PrivyProvider>
   );
 } 
