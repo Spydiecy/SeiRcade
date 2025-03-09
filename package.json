@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.0",
     "@headlessui/react": "^2.2.0",
     "@privy-io/react-auth": "^2.6.2",
     "aos": "^2.3.4",

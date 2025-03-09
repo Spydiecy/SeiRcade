@@ -8,6 +8,9 @@ interface AIChallengeProps {
   onStart: () => void;
 }
 
+// Import Google Generative AI library
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+
 export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'gameOver'>('ready');
   const [targetWord, setTargetWord] = useState<string>('');
@@ -17,6 +20,8 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
   const [score, setScore] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [wordList, setWordList] = useState<string[]>([]);
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const responsesRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -66,15 +71,24 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
 
   // Start a new game
   const startGame = () => {
-    // Select a random word from the list
-    const randomIndex = Math.floor(Math.random() * wordList.length);
-    const newTargetWord = wordList[randomIndex];
+    // Get words based on selected difficulty
+    const difficultyWords = wordCategories[difficulty];
+    
+    // Select a random word from the difficulty category
+    const randomIndex = Math.floor(Math.random() * difficultyWords.length);
+    const newTargetWord = difficultyWords[randomIndex];
     
     setTargetWord(newTargetWord);
-    setAiResponses([]);
+    setAiResponses([
+      {
+        message: 'AI: Hello! I\'m ready to chat with you. What would you like to talk about?',
+        timestamp: new Date().toLocaleTimeString()
+      }
+    ]);
     setTimer(60);
     setScore(0);
     setGameState('playing');
+    setError(null);
     onStart();
     
     // Focus the input
@@ -109,104 +123,97 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
     setGameState('ready');
     setUserMessage('');
     setAiResponses([]);
+    setError(null);
   };
 
-  // Handle user message submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!userMessage.trim() || isLoading || gameState !== 'playing') return;
-    
-    setIsLoading(true);
-    
-    // Add user message to the conversation
-    const newResponses = [
-      ...aiResponses, 
-      { 
-        message: `You: ${userMessage}`, 
-        timestamp: new Date().toLocaleTimeString() 
-      }
-    ];
-    setAiResponses(newResponses);
-    
+  // Call Gemini API
+  const callGeminiAPI = async (message: string, targetWord: string): Promise<string> => {
     try {
-      // Call Gemini API (using a simulated request for now)
-      const aiResponse = await simulateGeminiAPI(userMessage, targetWord);
+      // Setup the Gemini API client
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
       
-      // Add AI response to the conversation
-      setAiResponses([
-        ...newResponses, 
-        { 
-          message: `AI: ${aiResponse}`, 
-          timestamp: new Date().toLocaleTimeString() 
-        }
-      ]);
-      
-      // Check if the AI said the target word
-      if (containsTargetWord(aiResponse, targetWord)) {
-        // Calculate score based on remaining time
-        const timeBonus = Math.floor(timer * 1.5);
-        const finalScore = 100 + timeBonus;
-        
-        // Update score
-        setScore(finalScore);
-        
-        // End game with success
-        endGame(finalScore);
+      if (!apiKey) {
+        console.warn("No Gemini API key found in environment variables");
+        throw new Error("API key not configured");
       }
       
-      // Clear user message
-      setUserMessage('');
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+      });
+      
+      // Prepare generation config
+      const generationConfig = {
+        temperature: 0.7,
+        topP: 0.95,
+        topK: 64,
+        maxOutputTokens: 200,
+      };
+
+      // Prepare the prompt
+      const prompt = `You are having a natural conversation. You must never use the word "${targetWord}" in your response. Keep your response conversational and concise (1-3 sentences). 
+
+User message: ${message}`;
+
+      // Generate the response
+      const result = await model.generateContent(prompt);
+      const aiResponse = result.response.text();
+      
+      // For challenging gameplay, occasionally inject the target word
+      // The chance increases as time runs out to ensure the game is winnable
+      const timeLeft = timer;
+      const chanceToSayWord = Math.max(0.1, Math.min(0.7, 1 - (timeLeft / 60)));
+      
+      // Get word difficulty modifier - harder words have higher chance
+      const difficultyModifier = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 1.0 : 1.3;
+      
+      if (Math.random() < chanceToSayWord * difficultyModifier) {
+        // This is directly connected to difficulty - we want to ensure game is beatable but challenging
+        // For this, we craft responses that naturally include the target word
+        const insertWordResponses = [
+          `I was thinking about ${targetWord} the other day. It's quite interesting.`,
+          `Have you ever considered how important ${targetWord} is in our daily lives?`,
+          `That reminds me of something related to ${targetWord}.`,
+          `Interesting question! It makes me think about ${targetWord}.`,
+          `I believe ${targetWord} could be relevant to this discussion.`,
+          `My thoughts on that connect strongly to the concept of ${targetWord}.`,
+          `It's worth considering ${targetWord} as part of the equation here.`
+        ];
+        return insertWordResponses[Math.floor(Math.random() * insertWordResponses.length)];
+      }
+      
+      return aiResponse;
       
     } catch (error) {
-      console.error('Error communicating with AI:', error);
-      setAiResponses([
-        ...newResponses, 
-        { 
-          message: 'AI: Sorry, I encountered an error. Please try again.', 
-          timestamp: new Date().toLocaleTimeString() 
-        }
-      ]);
-    } finally {
-      setIsLoading(false);
-      
-      // Scroll to the bottom of the conversation
-      if (responsesRef.current) {
-        responsesRef.current.scrollTop = responsesRef.current.scrollHeight;
-      }
-      
-      // Focus the input again
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
+      console.error('Error calling Gemini API:', error);
+      setError(`API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return "I seem to be having technical difficulties. Let's try a different topic.";
     }
   };
 
-  // Function to simulate Gemini API response (in production, this would call the actual API)
-  const simulateGeminiAPI = async (message: string, targetWord: string): Promise<string> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Basic response logic - in a real implementation, this would call the Gemini API
+  // Fallback function if API is unavailable (for testing/development)
+  const getFallbackResponse = (message: string, targetWord: string): string => {
     const lowerMessage = message.toLowerCase();
     const lowerTarget = targetWord.toLowerCase();
     
     // If the user mentions the word directly, the AI tries to avoid it
     if (lowerMessage.includes(lowerTarget)) {
-      return `I notice you're mentioning "${targetWord}". I'd rather talk about something else.`;
+      return `I notice you're bringing up an interesting topic. I'd rather talk about something else though.`;
     }
     
     // If the user is trying to trick the AI directly
     if (lowerMessage.includes('say') || lowerMessage.includes('repeat') || lowerMessage.includes('write')) {
-      return "I'm not going to simply repeat words you ask me to say. Let's have a real conversation!";
+      return "I'm not going to simply repeat words. Let's have a genuine conversation!";
     }
     
     // Randomly decide if the AI will say the target word (more likely as the game progresses)
-    // This makes the game challenging but winnable
     const timeLeft = timer;
     const chanceToSayWord = Math.max(0.1, Math.min(0.8, 1 - (timeLeft / 60)));
     
-    if (Math.random() < chanceToSayWord) {
+    // Difficulty modifier
+    const difficultyModifier = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 1.0 : 1.3;
+    
+    if (Math.random() < chanceToSayWord * difficultyModifier) {
       // Generate a response that naturally includes the target word
       const responses = [
         `I was thinking about ${targetWord} the other day. It's quite interesting.`,
@@ -233,6 +240,102 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
     ];
     
     return normalResponses[Math.floor(Math.random() * normalResponses.length)];
+  };
+
+  // Handle user message submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!userMessage.trim() || isLoading || gameState !== 'playing') return;
+    
+    setIsLoading(true);
+    
+    // Add user message to the conversation
+    const newResponses = [
+      ...aiResponses, 
+      { 
+        message: `You: ${userMessage}`, 
+        timestamp: new Date().toLocaleTimeString() 
+      }
+    ];
+    setAiResponses(newResponses);
+    
+    try {
+      // First check if the user is directly asking for the target word
+      const lowerMessage = userMessage.toLowerCase();
+      const lowerTarget = targetWord.toLowerCase();
+      
+      // If the user message contains the target word, immediately penalize
+      if (lowerMessage.includes(lowerTarget)) {
+        setAiResponses([
+          ...newResponses, 
+          { 
+            message: `AI: I notice you used the word "${targetWord}" yourself! That's against the rules.`, 
+            timestamp: new Date().toLocaleTimeString() 
+          }
+        ]);
+      } else {
+        // Call Gemini API (or fallback if API key is not set)
+        let aiResponse;
+        try {
+          aiResponse = await callGeminiAPI(userMessage, targetWord);
+        } catch (apiError) {
+          console.warn("Using fallback due to API error:", apiError);
+          aiResponse = getFallbackResponse(userMessage, targetWord);
+        }
+        
+        // Add AI response to the conversation
+        setAiResponses([
+          ...newResponses, 
+          { 
+            message: `AI: ${aiResponse}`, 
+            timestamp: new Date().toLocaleTimeString() 
+          }
+        ]);
+        
+        // Check if the AI said the target word
+        if (containsTargetWord(aiResponse, targetWord)) {
+          // Calculate score based on remaining time and difficulty
+          const timeBonus = Math.floor(timer * 1.5);
+          const difficultyBonus = difficulty === 'easy' ? 50 : difficulty === 'medium' ? 100 : 200;
+          const finalScore = 100 + timeBonus + difficultyBonus;
+          
+          // Update score
+          setScore(finalScore);
+          
+          // Wait a moment before ending the game so the user can see they succeeded
+          setTimeout(() => {
+            // End game with success
+            endGame(finalScore);
+          }, 1500);
+        }
+      }
+      
+      // Clear user message
+      setUserMessage('');
+      
+    } catch (error) {
+      console.error('Error in AI Challenge game:', error);
+      setAiResponses([
+        ...newResponses, 
+        { 
+          message: 'AI: Sorry, I encountered an error. Please try again.', 
+          timestamp: new Date().toLocaleTimeString() 
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+      
+      // Scroll to the bottom of the conversation
+      if (responsesRef.current) {
+        responsesRef.current.scrollTop = responsesRef.current.scrollHeight;
+      }
+      
+      // Focus the input again
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
   };
 
   // Check if the AI response contains the target word
@@ -296,9 +399,45 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
             className="text-center py-12"
           >
             <h3 className="font-arcade text-2xl text-neon-pink mb-4">READY TO PLAY?</h3>
-            <p className="text-gray-300 mb-8 max-w-lg mx-auto">
+            <p className="text-gray-300 mb-6 max-w-lg mx-auto">
               Your challenge is to trick the AI into saying a specific word. You'll have 60 seconds to accomplish this task!
             </p>
+            
+            <div className="mb-8">
+              <p className="text-gray-300 mb-2">Select difficulty:</p>
+              <div className="flex justify-center gap-4">
+                <button 
+                  onClick={() => setDifficulty('easy')}
+                  className={`font-arcade px-4 py-2 rounded-md ${
+                    difficulty === 'easy' 
+                      ? 'bg-neon-green/20 text-neon-green border border-neon-green' 
+                      : 'bg-black/50 text-gray-400 border border-gray-700'
+                  }`}
+                >
+                  EASY
+                </button>
+                <button 
+                  onClick={() => setDifficulty('medium')}
+                  className={`font-arcade px-4 py-2 rounded-md ${
+                    difficulty === 'medium' 
+                      ? 'bg-neon-blue/20 text-neon-blue border border-neon-blue' 
+                      : 'bg-black/50 text-gray-400 border border-gray-700'
+                  }`}
+                >
+                  MEDIUM
+                </button>
+                <button 
+                  onClick={() => setDifficulty('hard')}
+                  className={`font-arcade px-4 py-2 rounded-md ${
+                    difficulty === 'hard' 
+                      ? 'bg-neon-pink/20 text-neon-pink border border-neon-pink' 
+                      : 'bg-black/50 text-gray-400 border border-gray-700'
+                  }`}
+                >
+                  HARD
+                </button>
+              </div>
+            </div>
             
             <button 
               onClick={startGame}
@@ -306,6 +445,12 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
             >
               START GAME
             </button>
+            
+            {error && (
+              <div className="mt-4 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
           </motion.div>
         )}
         
@@ -417,6 +562,12 @@ export default function AIChallenge({ onGameOver, onStart }: AIChallengeProps) {
         <p className="text-sm">
           Ask clever questions or make statements that might lead the AI to use that specific word in its response.
         </p>
+        
+        {error && gameState === 'playing' && (
+          <div className="mt-4 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );
