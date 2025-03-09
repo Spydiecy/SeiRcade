@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { CONTRACTS } from '../constants/contracts';
 import POINTS_MANAGER_ABI from '../constants/pointsManagerAbi';
 import GAME_ROOM_ABI from '../constants/gameRoomAbi';
@@ -11,7 +11,8 @@ import STATISTICS_TRACKER_ABI from '../constants/statisticsTrackerAbi';
  * Initializes contract instances when wallet is connected
  */
 export function useContracts() {
-  const { user, ready } = usePrivy();
+  const { ready } = usePrivy();
+  const { wallets } = useWallets();
   const [contracts, setContracts] = useState<{
     pointsManager: ethers.Contract | null;
     gameRoom: ethers.Contract | null;
@@ -26,14 +27,16 @@ export function useContracts() {
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   
   useEffect(() => {
-    // Ensure user and wallet are defined and ready
-    if (!ready || !user?.wallet) return;
+    // Ensure we have a ready wallet
+    if (!ready || !wallets.length) return;
     
     const initializeProvider = async () => {
       try {
-        // Create ethers provider from the wallet provider
-        // The provider from Privy wallet implements the EIP1193Provider interface
-        const ethersProvider = new ethers.providers.Web3Provider(user.wallet as any);
+        // Get the first wallet's Ethereum provider
+        const privyProvider = await wallets[0].getEthereumProvider();
+        
+        // Create ethers provider using the Privy provider
+        const ethersProvider = new ethers.providers.Web3Provider(privyProvider);
         setProvider(ethersProvider);
         
         // Get the signer from the provider
@@ -72,7 +75,7 @@ export function useContracts() {
     };
     
     initializeProvider();
-  }, [ready, user]);
+  }, [ready, wallets]);
   
   return {
     ...contracts,
