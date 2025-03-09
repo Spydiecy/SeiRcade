@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 import { useContracts } from './useContracts';
 import { usePrivy } from '@privy-io/react-auth';
 import { GameType, RoomType, RoomStatus } from '../constants/contracts';
@@ -210,9 +210,20 @@ export function useGameRoom() {
     
     try {
       const rooms = await gameRoom.getPlayerRooms(userAddress);
-      const roomIds = rooms.map((r: ethers.BigNumber) => r.toNumber());
-      setUserRooms(roomIds);
-      return roomIds;
+      
+      // Process and deduplicate room IDs
+      const rawRoomIds = rooms.map((r: ethers.BigNumber) => r.toNumber());
+      
+      // Filter out invalid IDs (zeros or negative)
+      const validRoomIds = rawRoomIds.filter((id: number) => id > 0);
+      
+      // Remove duplicates using Set and ensure number[] type
+      const uniqueRoomIds: number[] = Array.from(new Set(validRoomIds));
+      
+      console.log(`Fetched ${rawRoomIds.length} rooms, ${uniqueRoomIds.length} unique valid rooms`);
+      
+      setUserRooms(uniqueRoomIds);
+      return uniqueRoomIds;
     } catch (err: any) {
       console.error("Error getting user rooms:", err);
       setError(err.message || "Failed to get user rooms");
@@ -233,7 +244,21 @@ export function useGameRoom() {
     setError(null);
     
     try {
-      const room = await gameRoom.rooms(roomId);
+      // Ensure roomId is a proper number
+      console.log(`[getRoomDetails] Attempting to get room with ID: ${roomId} (${typeof roomId})`);
+      
+      if (!roomId || isNaN(roomId) || roomId <= 0) {
+        console.error(`[getRoomDetails] Invalid room ID provided: ${roomId}`);
+        setError("Invalid room ID provided");
+        return null;
+      }
+      
+      // Convert to BigNumber format if needed for the contract
+      const numericRoomId = ethers.BigNumber.from(roomId);
+      console.log(`[getRoomDetails] Using numeric room ID: ${numericRoomId.toString()}`);
+      
+      const room = await gameRoom.rooms(numericRoomId);
+      console.log(`[getRoomDetails] Room data received:`, room);
       
       // Format room data for easy consumption
       return {
@@ -261,7 +286,7 @@ export function useGameRoom() {
   };
   
   /**
-   * Get players in a room
+   * Get players in a room with proper data formatting
    * @param roomId ID of the room
    */
   const getPlayersInRoom = async (roomId: number) => {
@@ -272,9 +297,24 @@ export function useGameRoom() {
     
     try {
       const players = await gameRoom.getPlayers(roomId);
-      return players;
+      
+      // Safely format player data to ensure it has the expected structure
+      const formattedPlayers = Array.isArray(players) ? players.map((player: any) => {
+        // Only return valid player entries
+        if (!player || typeof player !== 'object') return null;
+        
+        // Format player data consistently
+        return {
+          playerAddress: player.playerAddress || null,
+          score: typeof player.score === 'number' ? player.score : 0,
+          hasSubmittedScore: !!player.hasSubmittedScore,
+          timestamp: player.timestamp ? player.timestamp.toNumber() : 0
+        };
+      }).filter(Boolean) : []; // Remove any null entries
+      
+      return formattedPlayers;
     } catch (err: any) {
-      console.error("Error getting players in room:", err);
+      console.error(`Error getting players in room ${roomId}:`, err);
       setError(err.message || "Failed to get players in room");
       return [];
     } finally {

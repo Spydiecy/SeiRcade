@@ -3,23 +3,28 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import FlappyBird from '@/components/games/FlappyBird';
 import AIChallenge from '@/components/games/AIChallenge';
 import { usePrivy } from '@privy-io/react-auth';
 import { useGameRoom, GameType, RoomType, RoomStatus } from '@/hooks/useGameRoom';
-import { usePointsManager } from '@/hooks/usePointsManager';
+import { usePoints } from '@/app/contexts/PointsContext';
+import { useWallet } from '@/app/contexts/WalletContext';
 
 export default function GamesPage() {
   const searchParams = useSearchParams();
-  const { authenticated, login } = usePrivy();
+  const { authenticated, user } = usePrivy();
+  const { walletConnected, connectWallet } = useWallet();
+  const { balance: pointsBalance, refreshBalance, loading: pointsLoading } = usePoints();
+  const router = useRouter();
+  
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinInviteCode, setJoinInviteCode] = useState('');
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   // Game states
@@ -29,6 +34,8 @@ export default function GamesPage() {
     maxPlayers: number;
     gameType: number;
     currentPlayers: number;
+    isCreator?: boolean;
+    status: number;
   } | null>(null);
   const [gameScore, setGameScore] = useState<number | null>(null);
   const [gameResult, setGameResult] = useState<{
@@ -49,12 +56,6 @@ export default function GamesPage() {
     error: gameRoomError
   } = useGameRoom();
   
-  const { 
-    balance: pointsBalance, 
-    getBalance, 
-    loading: pointsLoading
-  } = usePointsManager();
-  
   // Room creation form state
   const [roomSettings, setRoomSettings] = useState({
     entryFee: '50',
@@ -69,86 +70,315 @@ export default function GamesPage() {
   const [activeRooms, setActiveRooms] = useState<any[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   
-  // Check for room ID in URL parameters
+  // Add a state to track if the player has already played in this room
+  const [hasPlayedInRoom, setHasPlayedInRoom] = useState<boolean>(false);
+  
+  // Improved initialization for room loading with better debugging
   useEffect(() => {
+    // First check URL parameters
     const roomParam = searchParams.get('room');
+    console.log('URL params:', Object.fromEntries(searchParams.entries()));
+    console.log('Room param:', roomParam, typeof roomParam);
+    
+    // Only clear state if we're not already in a game
+    if (!activeGame) {
+      // Clear all game state except activeRoomId
+      setGameScore(null);
+      setHasPlayedInRoom(false);
+      setGameResult(null);
+      setGameSessionData(null);
+    }
+    
+    let roomIdToLoad: number | null = null;
+    
+    // First try to get room ID from URL
     if (roomParam) {
-      const roomId = parseInt(roomParam);
-      if (!isNaN(roomId)) {
-        setActiveRoomId(roomId);
-        loadRoomDetails(roomId);
+      try {
+        const parsedId = Number(roomParam);
+        if (!isNaN(parsedId) && parsedId > 0) {
+          roomIdToLoad = parsedId;
+          console.log(`Found valid room ID in URL: ${parsedId}`);
+        }
+      } catch (e) {
+        console.error('Error parsing room ID from URL:', e);
       }
     }
     
-    // Initial loading effect
+    // If no room ID in URL, check session storage (for dashboard navigation)
+    if (!roomIdToLoad && typeof window !== 'undefined') {
+      try {
+        const pendingRoomId = sessionStorage.getItem('pendingRoomId');
+        console.log('Checking session storage for pendingRoomId:', pendingRoomId);
+        
+        if (pendingRoomId) {
+          const parsedId = Number(pendingRoomId);
+          if (!isNaN(parsedId) && parsedId > 0) {
+            roomIdToLoad = parsedId;
+            console.log(`Found valid room ID in session storage: ${parsedId}`);
+            
+            // Clear from session storage to avoid reloading on page refresh
+            sessionStorage.removeItem('pendingRoomId');
+            
+            // Update URL to include room ID
+            const url = new URL(window.location.href);
+            url.searchParams.set('room', parsedId.toString());
+            window.history.pushState({}, '', url.toString());
+          }
+        }
+      } catch (e) {
+        console.error('Error checking session storage:', e);
+      }
+    }
+    
+    // Load room if we found a valid ID
+    if (roomIdToLoad) {
+      setActiveRoomId(roomIdToLoad);
+      loadRoomDetails(roomIdToLoad);
+    }
+    
+    // Loading animation for better UX
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
     
-    // Load active rooms
+    // Load active rooms for browsing
     loadActiveRooms();
-  }, [searchParams]);
+  }, [searchParams]); // Dependency on searchParams ensures this runs on navigation
   
   // Refresh user balance when authenticated
   useEffect(() => {
-    if (authenticated) {
-      getBalance();
+    if (walletConnected) {
+      refreshBalance();
     }
-  }, [authenticated]);
+  }, [walletConnected, refreshBalance]);
   
-  // Load room details
+  // Improved loadRoomDetails with better error handling and debugging
   const loadRoomDetails = async (roomId: number) => {
     try {
-      const room = await getRoomDetails(roomId);
-      if (room) {
-        setGameSessionData({
-          roomId,
-          entryFee: room.entryFee,
-          maxPlayers: room.maxPlayers,
-          gameType: room.gameType,
-          currentPlayers: room.currentPlayers
+      console.log(`[loadRoomDetails] Starting for roomId: ${roomId} (${typeof roomId})`);
+      setIsLoading(true);
+      
+      if (!roomId || isNaN(roomId) || roomId <= 0) {
+        console.error(`[loadRoomDetails] Invalid room ID: ${roomId}`);
+        setNotification({
+          type: 'error',
+          message: 'Invalid room ID provided'
         });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Update URL to include room ID without causing navigation
+      const url = new URL(window.location.href);
+      url.searchParams.set('room', roomId.toString());
+      window.history.pushState({}, '', url.toString());
+      console.log(`[loadRoomDetails] Updated URL to: ${url.toString()}`);
+      
+      console.log(`[loadRoomDetails] Fetching details for room ID: ${roomId}`);
+      // Force roomId to number to ensure consistency
+      const numericRoomId = Number(roomId);
+      const room = await getRoomDetails(numericRoomId);
+      
+      if (!room) {
+        console.error(`[loadRoomDetails] Room #${roomId} not found`);
+        setNotification({
+          type: 'error',
+          message: `Room #${roomId} not found or has been deleted`
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Log room details for debugging
+      console.log('[loadRoomDetails] Room details:', room);
+      console.log('[loadRoomDetails] Room status:', room.status);
+      
+      // Check if room status is already completed
+      if (room.status === 2) { // Completed
+        setNotification({
+          type: 'info',
+          message: `This game room has already been completed`
+        });
+      }
+      
+      // Get current user address
+      const currentUserAddress = user?.wallet?.address?.toLowerCase();
+      
+      // Check if user is the room creator
+      const isCreator = currentUserAddress && 
+        room.creator && 
+        room.creator.toLowerCase() === currentUserAddress;
+      
+      console.log("Is user the room creator?", isCreator);
+      
+      // Check if player has already played in this room
+      const playersData = await getPlayersInRoom(roomId);
+      console.log("Players in room:", playersData);
+      
+      // Safely find if current user has already submitted a score
+      const hasAlreadyPlayed = !!(
+        Array.isArray(playersData) && 
+        currentUserAddress && 
+        playersData.some(
+          player => player && 
+            player.playerAddress && 
+            player.playerAddress.toLowerCase() === currentUserAddress && 
+            player.hasSubmittedScore
+        )
+      );
+      
+      // Special handling for pending rooms (status 0)
+      if (room.status === 0) {
+        if (isCreator) {
+          // Creator viewing a pending room - they should play to set the score
+          // We'll force hasPlayedInRoom to false for creators of pending rooms
+          setHasPlayedInRoom(false);
+          
+          setNotification({
+            type: 'info',
+            message: `As the creator, you need to set a score for this room.`
+          });
+        } else if (playersData.length === 0) {
+          // No one has played yet, including the creator
+          setNotification({
+            type: 'info',
+            message: `The room creator hasn't set a score yet. Please check back later.`
+          });
+        }
+      } else {
+        // For non-pending rooms, set hasPlayedInRoom normally
+        setHasPlayedInRoom(hasAlreadyPlayed);
+      }
+      
+      if (hasAlreadyPlayed) {
+        console.log('User has already played in this room');
         
-        if (room.gameType === GameType.FlappyBird) {
-          setActiveGame('flappy-bird');
-        } else if (room.gameType === GameType.AIChallenge) {
-          setActiveGame('ai-challenge');
+        // Find user's score to display
+        if (Array.isArray(playersData) && currentUserAddress) {
+          const userPlayer = playersData.find(
+            player => player && 
+              player.playerAddress && 
+              player.playerAddress.toLowerCase() === currentUserAddress
+          );
+          
+          if (userPlayer && userPlayer.score !== undefined) {
+            setGameScore(userPlayer.score);
+            console.log(`User's score in this room: ${userPlayer.score}`);
+          }
         }
       }
-    } catch (error) {
+      
+      setGameSessionData({
+        roomId,
+        entryFee: room.entryFee,
+        maxPlayers: room.maxPlayers,
+        gameType: room.gameType,
+        currentPlayers: room.currentPlayers,
+        isCreator: isCreator,
+        status: room.status
+      });
+      
+      if (room.gameType === 0) { // GameType.FlappyBird
+        setActiveGame('flappy-bird');
+      } else if (room.gameType === 1) { // GameType.AIChallenge
+        setActiveGame('ai-challenge');
+      } else {
+        setNotification({
+          type: 'error',
+          message: `Unknown game type (${room.gameType})`
+        });
+      }
+      
+      setIsLoading(false);
+    } catch (error: any) {
       console.error("Error loading room details:", error);
       setNotification({
         type: 'error',
-        message: 'Failed to load room details. Please try again.'
+        message: `Failed to load room details: ${error.message || 'Unknown error'}`
       });
+      setIsLoading(false);
     }
   };
   
-  // Load active filling/public rooms
+  // Improved loadActiveRooms function with better ID handling
   const loadActiveRooms = async () => {
     setLoadingRooms(true);
     
     try {
-      // In production, you'd implement a more efficient way to query active rooms
-      // This is a simplified approach that loads rooms with IDs 1-20 and filters filling ones
-      const roomPromises = [];
-      for (let i = 1; i <= 20; i++) {
-        roomPromises.push(getRoomDetails(i).catch(() => null));
+      // In a real app, we would have a more efficient contract method
+      // to get all active rooms. For now we'll use this approach:
+      
+      // First try to get the total number of rooms (if contract supports it)
+      let totalRooms = 50; // Increased to find more potential rooms
+      try {
+        // This would be a contract call like: const count = await gameRoom.getTotalRoomCount();
+        // For now we'll use a fixed number
+        totalRooms = 50;
+      } catch (err) {
+        console.warn("Could not get total room count, using default value");
       }
       
-      const rooms = await Promise.all(roomPromises);
-      const fillingRooms = rooms
-        .filter(room => room && room.status === RoomStatus.Filling)
-        .map(room => ({
-          id: room!.id,
-          game: room!.gameType === GameType.FlappyBird ? 'FLAPPY BIRD' : 'AI CHALLENGE',
-          entry: room!.entryFee,
-          players: `${room!.currentPlayers}/${room!.maxPlayers}`,
-          time: formatTimeAgo(room!.creationTime),
-          type: room!.roomType === RoomType.Public ? 'PUBLIC' : 'PRIVATE'
-        }));
+      // Create array of room IDs to check
+      const roomIds = Array.from({ length: totalRooms }, (_, i) => i + 1);
+      
+      // Load rooms in batches to avoid too many parallel requests
+      const batchSize = 5;
+      let fillingRooms: any[] = [];
+      
+      for (let i = 0; i < roomIds.length; i += batchSize) {
+        const batch = roomIds.slice(i, i + batchSize);
+        const batchPromises = batch.map(id => 
+          getRoomDetails(id)
+            .then(room => room)
+            .catch(() => null)
+        );
+        
+        const batchResults = await Promise.all(batchPromises);
+        const validRooms = batchResults
+          .filter(room => room && room.status === 0) // Only get rooms with "Waiting" status
+          .map(room => {
+            // Ensure room ID is a valid number
+            const roomId = room!.id ? Number(room!.id) : null;
+            if (roomId === null || isNaN(roomId)) {
+              console.error("Invalid room ID:", room!.id);
+              return null;
+            }
+            
+            return {
+              id: roomId, // Ensure ID is a number
+              game: room!.gameType === 0 ? 'FLAPPY BIRD' : 'AI CHALLENGE',
+              entry: room!.entryFee,
+              players: `${room!.currentPlayers}/${room!.maxPlayers}`,
+              time: formatTimeAgo(room!.creationTime),
+              type: room!.roomType === 0 ? 'PUBLIC' : 'PRIVATE'
+            };
+          })
+          .filter(room => room !== null); // Remove invalid rooms
+        
+        fillingRooms = [...fillingRooms, ...validRooms];
+      }
+      
+      // Ensure rooms have unique IDs and remove duplicates
+      const uniqueRooms = Array.from(
+        new Map(fillingRooms.map(room => [room.id, room])).values()
+      );
+      
+      // Sort rooms by creation time (newest first)
+      uniqueRooms.sort((a, b) => {
+        const aTime = parseInt(a.time);
+        const bTime = parseInt(b.time);
+        return isNaN(aTime) || isNaN(bTime) ? 0 : bTime - aTime;
+      });
+      
+      console.log(`Loaded ${uniqueRooms.length} unique active rooms`);
+      setActiveRooms(uniqueRooms);
+      
     } catch (error) {
       console.error("Error loading active rooms:", error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to load active rooms. Please try again.'
+      });
     } finally {
       setLoadingRooms(false);
     }
@@ -167,64 +397,106 @@ export default function GamesPage() {
   
   // Handle game start
   const handleGameStart = () => {
-    console.log('Game started');
-    setGameScore(null);
-    setGameResult(null);
+    if (!walletConnected) {
+      setNotification({
+        type: 'error',
+        message: 'Please connect your wallet to play a game'
+      });
+      return;
+    }
+    
+    // Check if player has already played in this room
+    if (hasPlayedInRoom) {
+      setNotification({
+        type: 'error',
+        message: 'You have already played in this room! Each player can only play once per room.'
+      });
+      return;
+    }
+    
+    if (activeGame === 'flappy-bird') {
+      setGameScore(null);
+      setGameResult(null);
+    } else if (activeGame === 'ai-challenge') {
+      // AI Challenge setup
+    }
   };
   
   // Handle game over
   const handleGameOver = async (score: number) => {
     console.log(`Game over with score: ${score}`);
+    
+    // Immediately set the score to prevent multiple submissions
     setGameScore(score);
     
     // If we're in a room, submit the score to the blockchain
     if (gameSessionData?.roomId) {
       try {
         console.log(`Submitting score ${score} for room ${gameSessionData.roomId}`);
+        
+        // Mark that player has played to prevent additional plays
+        setHasPlayedInRoom(true);
+        
+        // Show loading notification
+        setNotification({
+          type: 'info',
+          message: 'Submitting your score... Please wait'
+        });
+        
         const result = await submitScore(gameSessionData.roomId, score);
         
         if (result) {
           setNotification({
             type: 'success',
-            message: 'Score submitted successfully! Waiting for other players to finish...'
+            message: `Score of ${score} submitted successfully!${gameSessionData.isCreator ? ' Other players can now join and play!' : ''}`
           });
           
-          // Check if this player won (this would need to be enhanced with event listening)
-          // For now, just fetch the room details again
-          setTimeout(async () => {
-            const updatedRoom = await getRoomDetails(gameSessionData.roomId!);
+          // Fetch updated room data after submitting score
+          const updatedRoom = await getRoomDetails(gameSessionData.roomId);
+          
+          if (updatedRoom) {
+            console.log("Updated room after score submission:", updatedRoom);
             
-            if (updatedRoom && updatedRoom.status === RoomStatus.Completed) {
-              // Get the user's wallet address
-              const { user } = usePrivy();
-              const userAddress = user?.wallet?.address;
-              
-              if (updatedRoom.winner && updatedRoom.winner.toLowerCase() === userAddress?.toLowerCase()) {
-                // Player won!
-                setGameResult({
-                  success: true,
-                  message: 'Congratulations! You won the game!',
-                  winnings: updatedRoom.prizePool
-                });
-                
-                // If prize not claimed yet, offer to claim
-                if (!updatedRoom.prizeClaimed) {
-                  // Show claim prize button/notification
-                }
-              } else if (updatedRoom.winner) {
-                // Game completed but player didn't win
-                setGameResult({
-                  success: false,
-                  message: 'Game over! Another player had a higher score.'
-                });
-              }
+            // If the user is the creator, make this more prominent
+            if (gameSessionData.isCreator) {
+              setNotification({
+                type: 'success',
+                message: 'Your score has been set as the challenge! Other players can now join and compete.'
+              });
             }
-          }, 5000); // Check after 5 seconds
+            
+            // If room is completed, check the winner
+            if (updatedRoom.status === 2) { // Completed
+              checkGameResult(updatedRoom);
+            } else {
+              // If room is still active, set up a polling interval to check for completion
+              const checkInterval = setInterval(async () => {
+                try {
+                  console.log("Checking if room is completed...");
+                  const refreshedRoom = await getRoomDetails(gameSessionData.roomId!);
+                  if (refreshedRoom && refreshedRoom.status === 2) {
+                    console.log("Room is now completed! Checking results...");
+                    checkGameResult(refreshedRoom);
+                    clearInterval(checkInterval);
+                  }
+                } catch (err) {
+                  console.error("Error checking room status:", err);
+                }
+              }, 10000); // Check every 10 seconds
+              
+              // Clear interval after 5 minutes (avoid infinite polling)
+              setTimeout(() => clearInterval(checkInterval), 300000);
+            }
+          }
         } else {
           setNotification({
             type: 'error',
             message: 'Failed to submit score. Please try again.'
           });
+          
+          // Allow retry if submission fails
+          setHasPlayedInRoom(false);
+          setGameScore(null);
         }
       } catch (error: any) {
         console.error("Error submitting score:", error);
@@ -232,12 +504,83 @@ export default function GamesPage() {
           type: 'error',
           message: `Error: ${error.message || 'Failed to submit score'}`
         });
+        
+        // Allow retry if submission fails
+        setHasPlayedInRoom(false);
+        setGameScore(null);
       }
+    }
+  };
+  
+  // Improved checkGameResult function for better handling of winners and game completion
+  const checkGameResult = (room: any) => {
+    // Log the room details for debugging
+    console.log("Checking game result for room:", room);
+    
+    const userAddress = user?.wallet?.address;
+    if (!userAddress) {
+      console.log("No user wallet address found");
+      return;
+    }
+    
+    // Check room status
+    if (room.status !== 2) { // Not completed
+      console.log(`Room ${room.id} is not yet completed (status: ${room.status})`);
+      return;
+    }
+    
+    console.log(`Room winner: ${room.winner || 'No winner yet'}`);
+    
+    // Check if there's a winner set
+    if (room.winner && room.winner.toLowerCase() === userAddress.toLowerCase()) {
+      // Player won!
+      console.log("User is the winner!");
+      setGameResult({
+        success: true,
+        message: 'Congratulations! You won the game!',
+        winnings: room.prizePool
+      });
+      
+      // Show a prominent notification
+      setNotification({
+        type: 'success',
+        message: `Congratulations! You won the game with a prize of ${parseInt(room.prizePool).toLocaleString()} points!`
+      });
+      
+    } else if (room.winner) {
+      // Game completed but player didn't win
+      console.log("User is not the winner");
+      setGameResult({
+        success: false,
+        message: 'Game over! Another player had a higher score.'
+      });
+      
+      // Show a notification
+      setNotification({
+        type: 'info',
+        message: `Game completed. The winner was ${room.winner.slice(0, 6)}...${room.winner.slice(-4)}`
+      });
+      
+    } else {
+      // Game is marked as completed but no winner yet (strange state)
+      console.log("Room is completed but has no winner");
+      setGameResult({
+        success: false,
+        message: 'Game is marked as completed but has no determined winner yet.'
+      });
     }
   };
   
   // Handle claim prize
   const handleClaimPrize = async (roomId: number) => {
+    if (!walletConnected) {
+      setNotification({
+        type: 'error',
+        message: 'Please connect your wallet to claim your prize'
+      });
+      return;
+    }
+    
     try {
       const result = await claimPrize(roomId);
       
@@ -248,15 +591,16 @@ export default function GamesPage() {
         });
         
         // Refresh balance
-        getBalance();
-      } else {
-        setNotification({
-          type: 'error',
-          message: 'Failed to claim prize. Please try again.'
-        });
+        refreshBalance();
+        
+        // Reset game session
+        resetGameSession();
+        
+        // Reload rooms list
+        loadActiveRooms();
       }
     } catch (error: any) {
-      console.error("Error claiming prize:", error);
+      console.error('Error claiming prize:', error);
       setNotification({
         type: 'error',
         message: `Error: ${error.message || 'Failed to claim prize'}`
@@ -264,11 +608,11 @@ export default function GamesPage() {
     }
   };
   
-  // Handle room creation
+  // Updated room creation to better handle newly created rooms
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!authenticated) {
+    if (!walletConnected) {
       setNotification({
         type: 'error',
         message: 'Please connect your wallet to create a room'
@@ -277,8 +621,27 @@ export default function GamesPage() {
     }
     
     try {
-      const gameTypeValue = roomSettings.gameType === 'FlappyBird' ? GameType.FlappyBird : GameType.AIChallenge;
-      const roomTypeValue = roomSettings.roomType === 'public' ? RoomType.Public : RoomType.Private;
+      // Check for missing required fields
+      if (!roomSettings.entryFee || !roomSettings.maxPlayers || !roomSettings.gameType) {
+        setNotification({
+          type: 'error',
+          message: 'Please fill in all required fields'
+        });
+        return;
+      }
+      
+      // Check for private rooms without invite code
+      if (roomSettings.roomType === 'private' && !roomSettings.inviteCode) {
+        setNotification({
+          type: 'error',
+          message: 'Private rooms require an invite code'
+        });
+        return;
+      }
+      
+      // Calculate settings
+      const gameTypeValue = roomSettings.gameType === 'FlappyBird' ? 0 : 1; // GameType enum values
+      const roomTypeValue = roomSettings.roomType === 'public' ? 0 : 1; // RoomType enum values
       
       console.log("Creating room with settings:", {
         entryFee: roomSettings.entryFee,
@@ -287,6 +650,12 @@ export default function GamesPage() {
         roomType: roomTypeValue,
         inviteCode: roomSettings.inviteCode,
         expirationTime: parseInt(roomSettings.expirationTime)
+      });
+      
+      // Create loading notification
+      setNotification({
+        type: 'info',
+        message: 'Creating your game room... Please wait'
       });
       
       const roomId = await createRoom(
@@ -299,20 +668,39 @@ export default function GamesPage() {
       );
       
       if (roomId) {
-        setNotification({
-          type: 'success',
-          message: `Room created successfully with ID: ${roomId}`
-        });
+        console.log(`Room created successfully with ID: ${roomId}`);
+        
+        // Clear any previous game state
+        setGameScore(null);
+        setHasPlayedInRoom(false);
+        setGameResult(null);
         
         // Close modal
         setShowRoomModal(false);
         
         // Reload active rooms
-        loadActiveRooms();
+        await loadActiveRooms();
         
-        // Enter the created room
-        setActiveRoomId(roomId);
-        loadRoomDetails(roomId);
+        // Refresh balance after room creation
+        await refreshBalance();
+        
+        // Show success with guidance to play
+        setNotification({
+          type: 'success',
+          message: `Room #${roomId} created successfully! You need to play first to set the score for this room.`
+        });
+        
+        // Directly join the room after a short delay
+        setTimeout(() => {
+          console.log(`Auto-joining newly created room: ${roomId}`);
+          // Need to force reset game state here to ensure it's clean
+          resetGameSession();
+          
+          // Load room and activate it
+          loadRoomDetails(roomId);
+          setActiveRoomId(roomId);
+        }, 1500);
+        
       } else {
         setNotification({
           type: 'error',
@@ -328,9 +716,9 @@ export default function GamesPage() {
     }
   };
   
-  // Handle joining a room
+  // Handle joining a room with improved checks
   const handleJoinRoom = async (roomId: number, inviteCode: string = '') => {
-    if (!authenticated) {
+    if (!walletConnected) {
       setNotification({
         type: 'error',
         message: 'Please connect your wallet to join a room'
@@ -339,20 +727,73 @@ export default function GamesPage() {
     }
     
     try {
-      const result = await joinRoom(roomId, inviteCode);
+      // First check if room exists and is in valid state
+      const room = await getRoomDetails(roomId);
+      if (!room) {
+        setNotification({
+          type: 'error',
+          message: 'Room not found or has been deleted'
+        });
+        return;
+      }
       
-      if (result) {
+      // Check if room is already full
+      if (room.currentPlayers >= room.maxPlayers) {
+        setNotification({
+          type: 'error',
+          message: 'This room is already full'
+        });
+        return;
+      }
+      
+      // Check if room is already completed
+      if (room.status === 2) { // Completed
+        setNotification({
+          type: 'error',
+          message: 'This game room has already been completed'
+        });
+        return;
+      }
+      
+      // Check if the user is the creator - creators are automatically in the room
+      const currentUserAddress = user?.wallet?.address?.toLowerCase();
+      const isCreator = currentUserAddress && 
+        room.creator && 
+        room.creator.toLowerCase() === currentUserAddress;
+      
+      // Check if user is already in this room
+      const players = await getPlayersInRoom(roomId);
+      const isAlreadyInRoom = Array.isArray(players) && currentUserAddress && 
+        players.some(player => 
+          player && 
+          player.playerAddress && 
+          player.playerAddress.toLowerCase() === currentUserAddress
+        );
+      
+      // If they're the creator or already in the room, just load the room
+      if (isCreator || isAlreadyInRoom) {
+        console.log(`User is ${isCreator ? 'creator' : 'already in'} room ${roomId}, loading directly`);
+        loadRoomDetails(roomId);
+        setActiveRoomId(roomId);
+        return;
+      }
+      
+      // Otherwise, join the room
+      console.log(`Joining room ${roomId} with invite code: ${inviteCode}`);
+      const success = await joinRoom(roomId, inviteCode);
+      
+      if (success) {
         setNotification({
           type: 'success',
           message: 'Joined room successfully!'
         });
         
-        // Close modal if open
-        setShowJoinModal(false);
-        
-        // Enter the joined room
-        setActiveRoomId(roomId);
+        // Load the room details and enter game
         loadRoomDetails(roomId);
+        setActiveRoomId(roomId);
+        
+        // Refresh balance
+        refreshBalance();
       } else {
         setNotification({
           type: 'error',
@@ -378,6 +819,13 @@ export default function GamesPage() {
   
   // Start join process for a room
   const startJoinRoom = (roomId: number, isPrivate: boolean) => {
+    console.log(`Starting join process for room: ${roomId}, isPrivate: ${isPrivate}`);
+    
+    // Update URL to include room ID without causing navigation
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', roomId.toString());
+    window.history.pushState({}, '', url.toString());
+    
     setJoinRoomId(roomId);
     
     if (isPrivate) {
@@ -387,13 +835,25 @@ export default function GamesPage() {
     }
   };
   
-  // Reset game session
+  // Improved resetGameSession function to avoid navigation loops
   const resetGameSession = () => {
+    console.log("Resetting game session");
+    // Clear game state
     setActiveGame(null);
     setActiveRoomId(null);
     setGameSessionData(null);
     setGameScore(null);
+    setHasPlayedInRoom(false);
     setGameResult(null);
+    
+    // Only navigate if we're not already on the games page
+    const isOnGamesPage = window.location.pathname === '/games' && 
+      !window.location.search.includes('room=');
+    
+    if (!isOnGamesPage) {
+      // Use client-side navigation
+      router.push('/games');
+    }
   };
   
   // Available games data (static information)
@@ -438,6 +898,26 @@ export default function GamesPage() {
     }
   ];
   
+  // Add useEffect to periodically refresh room list
+  useEffect(() => {
+    if (walletConnected && !activeGame) {
+      // Initial load
+      loadActiveRooms();
+      
+      // Set up periodic refresh
+      const refreshInterval = setInterval(() => {
+        if (!activeGame) {
+          console.log("Periodically refreshing room list...");
+          loadActiveRooms();
+        }
+      }, 30000); // Refresh every 30 seconds
+      
+      return () => {
+        clearInterval(refreshInterval);
+      };
+    }
+  }, [walletConnected, activeGame]);
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center arcade-bg">
@@ -451,16 +931,18 @@ export default function GamesPage() {
       {activeGame ? (
         <div className="container mx-auto px-4 pt-4">
           <div className="flex justify-between items-center mb-6">
-            <motion.button
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="arcade-button-blue"
-              onClick={resetGameSession}
+            <Link 
+              href="/games" 
+              className="text-gray-300 hover:text-neon-blue transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                resetGameSession();
+              }}
             >
-              ← BACK TO GAMES
-            </motion.button>
+              ← Back to Games
+            </Link>
             
-            {authenticated && (
+            {walletConnected && (
               <motion.button
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -480,7 +962,7 @@ export default function GamesPage() {
               className={`mb-6 p-4 rounded-md ${
                 notification.type === 'success' 
                   ? 'bg-green-900/30 border border-neon-green text-neon-green' 
-                  : 'bg-red-900/30 border border-red-500 text-red-400'
+                  : notification.type === 'error' ? 'bg-red-900/30 border border-red-500 text-red-400' : 'bg-yellow-900/30 border border-yellow-500 text-yellow-400'
               }`}
             >
               <div className="flex justify-between items-center">
@@ -565,11 +1047,193 @@ export default function GamesPage() {
             transition={{ duration: 0.5 }}
           >
             {activeGame === 'flappy-bird' && (
-              <FlappyBird onGameOver={handleGameOver} onStart={handleGameStart} />
+              <div className="container mx-auto p-4">
+                {/* Room info header */}
+                {gameSessionData && (
+                  <div className="bg-black/50 p-4 mb-6 rounded-md">
+                    <h2 className="font-arcade text-xl text-white mb-2">
+                      {`Room #${gameSessionData.roomId} - Flappy Bird`}
+                    </h2>
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <div className="text-gray-300">
+                        <span className="text-neon-blue">Entry:</span> {parseInt(gameSessionData.entryFee).toLocaleString()} points
+                      </div>
+                      <div className="text-gray-300">
+                        <span className="text-neon-blue">Players:</span> {gameSessionData.currentPlayers}/{gameSessionData.maxPlayers}
+                      </div>
+                    </div>
+                    
+                    {/* Creator instructions - show this when the user is the creator and hasn't played yet */}
+                    {gameSessionData.isCreator && !hasPlayedInRoom && !gameScore && (
+                      <div className="mt-4 p-3 bg-green-900/30 border border-neon-green rounded-md">
+                        <p className="text-neon-green font-bold mb-1">You created this room!</p>
+                        <p className="text-gray-300 text-sm">As the creator, you need to play and submit a score to set the challenge for other players.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Game result */}
+                {gameResult && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mb-6 p-4 rounded-md ${
+                      gameResult.success 
+                        ? 'bg-green-900/30 border border-neon-green' 
+                        : 'bg-red-900/30 border border-red-500'
+                    }`}
+                  >
+                    <h3 className={`text-xl font-arcade mb-2 ${
+                      gameResult.success ? 'text-neon-green' : 'text-red-400'
+                    }`}>
+                      {gameResult.success ? 'YOU WON!' : 'GAME OVER'}
+                    </h3>
+                    <p className="text-gray-300 mb-4">{gameResult.message}</p>
+                    
+                    {gameResult.success && gameResult.winnings && (
+                      <div className="mb-6">
+                        <p className="text-neon-green text-lg font-arcade">
+                          Prize: {parseInt(gameResult.winnings).toLocaleString()} points
+                        </p>
+                        <button 
+                          onClick={() => gameSessionData && handleClaimPrize(gameSessionData.roomId!)}
+                          className="arcade-button-green mt-4"
+                        >
+                          CLAIM PRIZE
+                        </button>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-4">
+                      <button
+                        onClick={resetGameSession}
+                        className="arcade-button-blue"
+                      >
+                        RETURN TO LOBBY
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {/* Game score */}
+                {gameScore !== null && !gameResult && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 rounded-md bg-black/50 border border-neon-blue"
+                  >
+                    <h3 className="text-xl font-arcade text-neon-blue mb-2">SCORE SUBMITTED</h3>
+                    <p className="text-gray-300 mb-2">Your score has been submitted!</p>
+                    <p className="text-gray-300">Final Score: <span className="text-neon-pink font-arcade">{gameScore}</span></p>
+                    <p className="text-gray-300 mt-4">Waiting for other players to complete the game...</p>
+                  </motion.div>
+                )}
+                
+                {/* Game component */}
+                <div className="bg-black/30 p-2 md:p-6 rounded-lg border border-neon-blue">
+                  <FlappyBird 
+                    onGameOver={handleGameOver} 
+                    onStart={handleGameStart}
+                    disabled={hasPlayedInRoom || gameScore !== null}
+                    isCreator={gameSessionData?.isCreator}
+                  />
+                </div>
+              </div>
             )}
             
             {activeGame === 'ai-challenge' && (
-              <AIChallenge onGameOver={handleGameOver} onStart={handleGameStart} />
+              <div className="container mx-auto p-4">
+                {/* Room info header */}
+                {gameSessionData && (
+                  <div className="bg-black/50 p-4 mb-6 rounded-md">
+                    <h2 className="font-arcade text-xl text-white mb-2">
+                      {`Room #${gameSessionData.roomId} - AI Challenge`}
+                    </h2>
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <div className="text-gray-300">
+                        <span className="text-neon-blue">Entry:</span> {parseInt(gameSessionData.entryFee).toLocaleString()} points
+                      </div>
+                      <div className="text-gray-300">
+                        <span className="text-neon-blue">Players:</span> {gameSessionData.currentPlayers}/{gameSessionData.maxPlayers}
+                      </div>
+                    </div>
+                    
+                    {/* Creator instructions - show this when the user is the creator and hasn't played yet */}
+                    {gameSessionData.isCreator && !hasPlayedInRoom && !gameScore && (
+                      <div className="mt-4 p-3 bg-green-900/30 border border-neon-green rounded-md">
+                        <p className="text-neon-green font-bold mb-1">You created this room!</p>
+                        <p className="text-gray-300 text-sm">As the creator, you need to play and submit a score to set the challenge for other players.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Game result */}
+                {gameResult && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mb-6 p-4 rounded-md ${
+                      gameResult.success 
+                        ? 'bg-green-900/30 border border-neon-green' 
+                        : 'bg-red-900/30 border border-red-500'
+                    }`}
+                  >
+                    <h3 className={`text-xl font-arcade mb-2 ${
+                      gameResult.success ? 'text-neon-green' : 'text-red-400'
+                    }`}>
+                      {gameResult.success ? 'YOU WON!' : 'GAME OVER'}
+                    </h3>
+                    <p className="text-gray-300 mb-4">{gameResult.message}</p>
+                    
+                    {gameResult.success && gameResult.winnings && (
+                      <div className="mb-6">
+                        <p className="text-neon-green text-lg font-arcade">
+                          Prize: {parseInt(gameResult.winnings).toLocaleString()} points
+                        </p>
+                        <button 
+                          onClick={() => gameSessionData && handleClaimPrize(gameSessionData.roomId!)}
+                          className="arcade-button-green mt-4"
+                        >
+                          CLAIM PRIZE
+                        </button>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-4">
+                      <button
+                        onClick={resetGameSession}
+                        className="arcade-button-blue"
+                      >
+                        RETURN TO LOBBY
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {/* Game score */}
+                {gameScore !== null && !gameResult && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 rounded-md bg-black/50 border border-neon-blue"
+                  >
+                    <h3 className="text-xl font-arcade text-neon-blue mb-2">SCORE SUBMITTED</h3>
+                    <p className="text-gray-300 mb-2">Your score has been submitted!</p>
+                    <p className="text-gray-300">Final Score: <span className="text-neon-pink font-arcade">{gameScore}</span></p>
+                    <p className="text-gray-300 mt-4">Waiting for other players to complete the game...</p>
+                  </motion.div>
+                )}
+                
+                {/* Game component */}
+                <AIChallenge 
+                  onGameOver={handleGameOver}
+                  onStart={handleGameStart}
+                  disabled={hasPlayedInRoom || gameScore !== null}
+                  isCreator={gameSessionData?.isCreator}
+                />
+              </div>
             )}
             
             {(activeGame === 'cyber-racer' || activeGame === 'memory-hacker') && (
@@ -589,134 +1253,127 @@ export default function GamesPage() {
           </motion.div>
         </div>
       ) : (
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8 flex justify-between items-center flex-wrap gap-4"
-          >
-            <div>
-              <h1 className="text-3xl font-arcade neon-text glitch-text" data-text="ARCADE GAMES">
-                ARCADE GAMES
-              </h1>
-              <div className="h-1 w-40 bg-gradient-to-r from-neon-blue via-neon-pink to-transparent mt-2"></div>
-            </div>
-            
-            {authenticated && (
-              <button
-                onClick={() => setShowRoomModal(true)}
-                className="arcade-button-large"
-              >
-                + CREATE GAME ROOM
-              </button>
-            )}
-          </motion.div>
-          
-          {/* Notification */}
-          {notification && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`mb-6 p-4 rounded-md ${
-                notification.type === 'success' 
-                  ? 'bg-green-900/30 border border-neon-green text-neon-green' 
-                  : 'bg-red-900/30 border border-red-500 text-red-400'
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <p>{notification.message}</p>
-                <button 
-                  onClick={() => setNotification(null)} 
-                  className="text-gray-400 hover:text-white"
-                >
-                  ×
-                </button>
-              </div>
-            </motion.div>
-          )}
-          
-          {/* Game Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {availableGames.map((game, index) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                index={index}
-                onClick={() => setActiveGame(game.id)}
-              />
-            ))}
-          </div>
-          
-          {/* Active Rooms Section */}
+        <div className="container mx-auto px-4 pt-12 pb-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
           >
-            <h2 className="text-2xl font-arcade neon-text-blue mb-6">ACTIVE ROOMS</h2>
+            <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ARCADE GAMES</h1>
+            <p className="text-xl text-gray-300">Play, compete, and win CORE tokens</p>
+          </motion.div>
+          
+          {/* Game Selection Grid */}
+          <div className="mb-16">
+            <h2 className="text-2xl font-arcade neon-text mb-6">SELECT A GAME</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {availableGames.map((game, index) => (
+                <GameCard 
+                  key={game.id} 
+                  game={game} 
+                  index={index}
+                  onClick={() => {
+                    if (game.comingSoon) {
+                      setNotification({
+                        type: 'info',
+                        message: 'This game is coming soon!'
+                      });
+                    } else {
+                      setActiveGame(game.id);
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Active Rooms Section with Improved Debugging */}
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-arcade neon-text-blue">ACTIVE ROOMS</h2>
+              
+              {!loadingRooms && (
+                <div className="text-xs text-gray-400">
+                  {activeRooms.length} room{activeRooms.length !== 1 ? 's' : ''} found
+                </div>
+              )}
+            </div>
             
-            {authenticated ? (
+            {walletConnected ? (
               <>
                 {loadingRooms ? (
-                  <div className="flex justify-center items-center h-64">
+                  <div className="text-center py-16">
                     <div className="loading"></div>
+                    <p className="text-gray-400 mt-4">Searching for active rooms...</p>
                   </div>
                 ) : activeRooms.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    {activeRooms.map((room, index) => (
-                      <RoomCard 
-                        key={room.id} 
-                        room={room} 
-                        index={index}
-                        onJoin={() => startJoinRoom(
-                          room.id, 
-                          room.type === 'PRIVATE'
-                        )}
-                      />
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {activeRooms.map((room, index) => {
+                      // Generate a truly unique key for this room
+                      const uniqueKey = `room-${room.id}-${index}`;
+                      
+                      return (
+                        <RoomCard 
+                          key={uniqueKey} 
+                          room={room} 
+                          index={index}
+                          onJoin={() => startJoinRoom(room.id, room.type === 'PRIVATE')}
+                        />
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-center py-16 bg-black/60 border-2 border-gray-800 rounded-lg">
-                    <h3 className="text-xl font-arcade text-neon-blue mb-4">NO ACTIVE ROOMS</h3>
-                    <p className="text-gray-300 mb-8 max-w-md mx-auto">
-                      There are no active game rooms at the moment. Create your own room to start playing!
+                  <div className="text-center py-12 bg-black/20 rounded-lg border border-gray-800">
+                    <p className="text-xl font-arcade text-neon-pink mb-4">NO ACTIVE ROOMS</p>
+                    <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                      There are currently no active game rooms. 
+                      Create a new room to start playing!
                     </p>
-                    <button
-                      onClick={() => setShowRoomModal(true)}
-                      className="arcade-button-green"
-                    >
-                      CREATE ROOM
-                    </button>
+                    <div className="flex flex-col md:flex-row justify-center gap-4">
+                      <button
+                        onClick={() => {
+                          // Force a refresh of room data
+                          setActiveRooms([]);
+                          setLoadingRooms(true);
+                          loadActiveRooms();
+                        }}
+                        className="arcade-button-blue"
+                      >
+                        REFRESH ROOMS
+                      </button>
+                      <button
+                        onClick={() => setShowRoomModal(true)}
+                        className="arcade-button-green"
+                      >
+                        CREATE ROOM
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-center py-16 bg-black/60 border-2 border-gray-800 rounded-lg">
-                <h3 className="text-xl font-arcade text-neon-pink mb-4">WALLET REQUIRED</h3>
-                <p className="text-gray-300 mb-8 max-w-md mx-auto">
-                  Connect your wallet to view active game rooms and compete with other players.
+              <div className="text-center py-16 bg-black/20 rounded-lg border border-gray-800">
+                <p className="text-xl font-arcade text-neon-pink mb-4">CONNECT YOUR WALLET</p>
+                <p className="text-gray-400 mb-8 max-w-md mx-auto">
+                  Connect your wallet to see active rooms or create your own!
                 </p>
                 <button
-                  onClick={() => login()}
+                  onClick={connectWallet}
                   className="arcade-button-green"
                 >
                   CONNECT WALLET
                 </button>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       )}
       
       {/* Create Room Modal */}
       {showRoomModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-900 border-2 border-neon-blue rounded-lg p-6 w-full max-w-md"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div className="w-full max-w-md bg-black/90 border-2 border-neon-blue p-6 rounded-md backdrop-blur-md">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-arcade text-neon-blue">CREATE GAME ROOM</h3>
               <button
@@ -727,7 +1384,28 @@ export default function GamesPage() {
               </button>
             </div>
             
-            {pointsBalance > 0 ? (
+            {!walletConnected ? (
+              <div className="text-center p-4">
+                <p className="text-neon-pink text-lg mb-4">Wallet Not Connected</p>
+                <p className="text-gray-300 mb-6">
+                  You need to connect your wallet to create a game room.
+                </p>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => setShowRoomModal(false)}
+                    className="arcade-button-red"
+                  >
+                    CLOSE
+                  </button>
+                  <button
+                    onClick={connectWallet}
+                    className="arcade-button-green"
+                  >
+                    CONNECT WALLET
+                  </button>
+                </div>
+              </div>
+            ) : pointsBalance > 0 ? (
               <form onSubmit={handleCreateRoom}>
                 <div className="space-y-4">
                   <div>
@@ -857,26 +1535,28 @@ export default function GamesPage() {
                   >
                     CLOSE
                   </button>
-                  <Link href="/dashboard" className="arcade-button-blue">
+                  <button 
+                    onClick={() => {
+                      setShowRoomModal(false);
+                      router.push('/dashboard');
+                    }}
+                    className="arcade-button-blue"
+                  >
                     GO TO DASHBOARD
-                  </Link>
+                  </button>
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       )}
       
-      {/* Join Private Room Modal */}
+      {/* Modal: Join Private Room */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-900 border-2 border-neon-green rounded-lg p-6 w-full max-w-md"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div className="w-full max-w-md bg-black/90 border-2 border-neon-blue p-6 rounded-md backdrop-blur-md">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-arcade text-neon-green">JOIN PRIVATE ROOM</h3>
+              <h3 className="text-xl font-arcade text-neon-blue">JOIN PRIVATE ROOM</h3>
               <button
                 onClick={() => setShowJoinModal(false)}
                 className="text-gray-400 hover:text-white"
@@ -885,14 +1565,33 @@ export default function GamesPage() {
               </button>
             </div>
             
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (joinRoomId) {
-                handleJoinRoom(joinRoomId, joinInviteCode);
-              }
-            }}>
-              <div className="space-y-4">
-                <div>
+            {!walletConnected ? (
+              <div className="text-center p-4">
+                <p className="text-neon-pink text-lg mb-4">Wallet Not Connected</p>
+                <p className="text-gray-300 mb-6">
+                  You need to connect your wallet to join a game room.
+                </p>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => setShowJoinModal(false)}
+                    className="arcade-button-red"
+                  >
+                    CLOSE
+                  </button>
+                  <button
+                    onClick={connectWallet}
+                    className="arcade-button-green"
+                  >
+                    CONNECT WALLET
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-gray-300 mb-4">
+                  This is a private room. Please enter the invite code to join.
+                </p>
+                <div className="mb-4">
                   <label className="block text-sm font-arcade text-gray-300 mb-2">
                     INVITE CODE
                   </label>
@@ -900,13 +1599,11 @@ export default function GamesPage() {
                     type="text"
                     value={joinInviteCode}
                     onChange={(e) => setJoinInviteCode(e.target.value)}
-                    className="w-full bg-black border-2 border-neon-green text-white p-2 rounded-md"
-                    placeholder="Enter the room invite code"
-                    required
+                    className="w-full bg-black border-2 border-neon-pink text-white p-2 rounded-md"
+                    placeholder="Enter invite code"
                   />
                 </div>
-                
-                <div className="pt-4 flex justify-end gap-4">
+                <div className="flex justify-between">
                   <button
                     type="button"
                     onClick={() => setShowJoinModal(false)}
@@ -915,20 +1612,24 @@ export default function GamesPage() {
                     CANCEL
                   </button>
                   <button
-                    type="submit"
-                    disabled={gameRoomLoading || !joinInviteCode}
+                    type="button"
+                    onClick={() => {
+                      if (joinRoomId !== null) {
+                        handleJoinRoom(joinRoomId, joinInviteCode);
+                        setShowJoinModal(false);
+                      }
+                    }}
+                    disabled={!joinInviteCode || gameRoomLoading}
                     className={`arcade-button-green ${
-                      gameRoomLoading || !joinInviteCode 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : ''
+                      !joinInviteCode || gameRoomLoading ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                   >
                     {gameRoomLoading ? 'JOINING...' : 'JOIN ROOM'}
                   </button>
                 </div>
               </div>
-            </form>
-          </motion.div>
+            )}
+          </div>
         </div>
       )}
     </div>

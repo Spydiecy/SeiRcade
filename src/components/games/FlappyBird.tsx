@@ -6,9 +6,11 @@ import { motion } from 'framer-motion';
 interface FlappyBirdProps {
   onGameOver: (score: number) => void;
   onStart: () => void;
+  disabled?: boolean; // Indicates if the player has already played in this room
+  isCreator?: boolean; // Indicates if the player created this room
 }
 
-export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
+export default function FlappyBird({ onGameOver, onStart, disabled = false, isCreator = false }: FlappyBirdProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestIdRef = useRef<number | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
@@ -70,6 +72,9 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     pipeBottom: null,
     background: null
   });
+
+  // Modify the disabled check to allow room creators to play
+  const isPlayDisabled = disabled && !isCreator;
 
   // Function to play sounds safely
   const playSoundEffect = (type: 'start' | 'score' | 'crash', volume = 0.5) => {
@@ -318,20 +323,28 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     }
   }, [isReady]);
 
-  // Handle game input
+  // Handle flapping (modified to respect disabled state)
   const handleFlap = () => {
+    // Don't allow flapping if the game is disabled (unless creator)
+    if (isPlayDisabled) return;
+    
+    // If game not yet started, start it
+    if (!gameStateRef.current.gameStarted && !gameStateRef.current.gameOver) {
+      startGame();
+      return;
+    }
+
+    // Don't flap if game is over
     if (gameStateRef.current.gameOver) {
       resetGame();
       return;
     }
-    
-    if (!gameStateRef.current.gameStarted) {
-      startGame();
-      return;
-    }
-    
-    // Flap the bird
+
+    // Add flap velocity
     birdRef.current.velocity = FLAP_POWER;
+    
+    // Play flap sound
+    playSoundEffect('start', 0.2);
   };
 
   // Update game state and handle input
@@ -355,46 +368,46 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
 
   // Start the game
   const startGame = () => {
-    console.log("Starting game!");
+    // Don't allow starting if disabled (unless creator)
+    if (isPlayDisabled) return;
     
-    // Initialize bird position
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    birdRef.current = {
-      x: canvas.width / 4,
-      y: canvas.height / 2,
-      velocity: 0,
-      width: 40,
-      height: 30
-    };
-    
-    // Clear pipes
-    pipesRef.current = [];
-    
-    // Reset score
-    scoreRef.current = 0;
-    setScore(0);
-    
-    // Update game state
-    setGameStarted(true);
-    setGameOver(false);
-    gameStateRef.current = { gameStarted: true, gameOver: false };
-    
-    // Start pipe generation
-    generatePipe();
-    
-    // Start game loop if not already running
-    if (!requestIdRef.current) {
-      lastTimestampRef.current = 0;
-      requestIdRef.current = requestAnimationFrame(updateGame);
+    if (!gameStateRef.current.gameStarted) {
+      // Notify parent component
+      onStart();
+      
+      // Initialize bird position
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      
+      birdRef.current = {
+        x: canvas.width / 4,
+        y: canvas.height / 2,
+        velocity: 0,
+        width: 40,
+        height: 30
+      };
+      
+      // Reset and start game
+      birdRef.current.velocity = 0;
+      pipesRef.current = [];
+      scoreRef.current = 0;
+      setScore(0);
+      setGameStarted(true);
+      setGameOver(false);
+      gameStateRef.current = { gameStarted: true, gameOver: false };
+      
+      // Play start sound
+      playSoundEffect('start');
+      
+      // Start game loop if not already running
+      if (!requestIdRef.current) {
+        lastTimestampRef.current = 0;
+        requestIdRef.current = requestAnimationFrame(updateGame);
+      }
+      
+      // Start pipe generation
+      generatePipe();
     }
-    
-    // Play start sound
-    playSoundEffect('start');
-    
-    // Notify parent component
-    onStart();
   };
 
   // Generate pipe
@@ -516,7 +529,7 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     ctx.font = '20px "Press Start 2P", cursive';
     ctx.fillStyle = '#00FF00'; // Green
     ctx.textAlign = 'left';
-    ctx.fillText('Score: ' + score, 20, 40);
+    ctx.fillText('Score: ' + scoreRef.current, 20, 40);
     
     // Draw high score
     ctx.fillStyle = '#FF00FF'; // Magenta
@@ -719,7 +732,9 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
           ref={canvasRef} 
           width={800} 
           height={600} 
-          className="border-4 border-neon-blue rounded-lg shadow-lg shadow-neon-blue/20 max-w-full cursor-pointer" 
+          className={`border-4 border-neon-blue rounded-lg shadow-lg shadow-neon-blue/20 max-w-full ${
+            isPlayDisabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+          }`} 
           onClick={handleFlap}
         />
         
@@ -730,11 +745,13 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
           </div>
         )}
         
-        {/* Game state debug overlay (hidden in production) */}
-        {false && (
-          <div className="absolute top-0 right-0 bg-black/70 p-2 text-white text-xs">
-            <div>Game Started: {gameStarted ? 'Yes' : 'No'}</div>
-            <div>Game Over: {gameOver ? 'Yes' : 'No'}</div>
+        {/* Disabled overlay */}
+        {isPlayDisabled && isReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+            <div className="text-center p-4">
+              <p className="text-neon-pink text-2xl font-arcade mb-2">ALREADY PLAYED</p>
+              <p className="text-white text-sm">You have already played in this room. Each player can only play once per room.</p>
+            </div>
           </div>
         )}
       </div>

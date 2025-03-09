@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useGameRoom } from '@/hooks/useGameRoom';
 import { useStatisticsTracker } from '@/hooks/useStatisticsTracker';
 import { usePoints } from '@/app/contexts/PointsContext';
 import { useWallet } from '@/app/contexts/WalletContext';
+import { useRouter } from 'next/navigation';
+import router from 'next/router';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'wallet' | 'rooms' | 'stats'>('wallet');
   
@@ -31,7 +34,8 @@ export default function DashboardPage() {
     userRooms, 
     getRoomDetails,
     loading: gameRoomLoading, 
-    error: gameRoomError 
+    error: gameRoomError,
+    getPlayersInRoom
   } = useGameRoom();
   
   const { 
@@ -369,8 +373,8 @@ export default function DashboardPage() {
               </div>
             ) : userRooms && userRooms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {userRooms.map((roomId) => (
-                  <RoomCard key={roomId} roomId={roomId} />
+                {userRooms.map((roomId, index) => (
+                  <RoomCard key={`user-room-${roomId}-${index}`} roomId={roomId} />
                 ))}
               </div>
             ) : (
@@ -442,9 +446,12 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-400">No statistics available. Play some games to see your stats!</p>
-                <Link href="/games" className="arcade-button-green block mt-4 max-w-xs mx-auto">
+                <button
+                  onClick={() => router.push('/games')}
+                  className="arcade-button-green block mt-4 max-w-xs mx-auto"
+                >
                   FIND GAMES
-                </Link>
+                </button>
               </div>
             )}
           </div>
@@ -457,28 +464,95 @@ export default function DashboardPage() {
 function RoomCard({ roomId }: { roomId: number }) {
   const [room, setRoom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { getRoomDetails } = useGameRoom();
+  const [error, setError] = useState<string | null>(null);
+  const { getRoomDetails, getPlayersInRoom } = useGameRoom();
+  const { walletAddress } = useWallet();
+  const router = useRouter();
+  
+  // Prevent continuous refreshing using a ref flag
+  const hasLoadedRef = useRef(false);
   
   useEffect(() => {
     async function loadRoom() {
+      // Only load once per component instance to prevent refresh loops
+      if (hasLoadedRef.current) return;
+      
       try {
         setLoading(true);
+        setError(null);
+        
+        // Get room details
         const roomDetails = await getRoomDetails(roomId);
-        setRoom(roomDetails);
+        if (!roomDetails) {
+          setError("Room not found");
+          setLoading(false);
+          return;
+        }
+        
+        // Get players in room with proper typing
+        let players: Array<any> = [];
+        let userScore = null;
+        
+        try {
+          players = await getPlayersInRoom(roomId);
+          
+          // Find current user's score if they played in this room
+          if (walletAddress && players && Array.isArray(players)) {
+            // Safely find player with proper null checks
+            const userPlayer = players.find(
+              (player: any) => player && 
+                player.playerAddress && 
+                typeof player.playerAddress === 'string' && 
+                player.playerAddress.toLowerCase() === walletAddress.toLowerCase()
+            );
+            
+            if (userPlayer && userPlayer.hasSubmittedScore) {
+              userScore = userPlayer.score;
+            }
+          }
+        } catch (playerError) {
+          console.warn(`Error fetching players for room ${roomId}:`, playerError);
+          // Continue with just the room details
+          players = [];
+        }
+        
+        // Set room with enhanced data
+        setRoom({
+          ...roomDetails,
+          userScore,
+          players,
+          // Check if current user is the creator
+          isCreator: walletAddress && roomDetails.creator && 
+            roomDetails.creator.toLowerCase() === walletAddress.toLowerCase()
+        });
+        
+        // Mark as loaded to prevent refresh loops
+        hasLoadedRef.current = true;
         setLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error loading room ${roomId}:`, error);
+        setError(error.message || "Failed to load room data");
         setLoading(false);
+        
+        // Still mark as loaded even on error to prevent refresh loops
+        hasLoadedRef.current = true;
       }
     }
     
-    loadRoom();
-  }, [roomId, getRoomDetails]);
+    if (roomId) {
+      loadRoom();
+    }
+    
+    // Clear loading state if component unmounts
+    return () => {
+      setLoading(false);
+    };
+  }, [roomId, getRoomDetails, getPlayersInRoom, walletAddress]);
   
   const getGameTypeName = (type: number) => {
     const gameTypes: {[key: number]: string} = {
-      0: 'Poker',
-      1: 'Blackjack',
+      0: 'Flappy Bird',
+      1: 'AI Challenge'
     };
     return gameTypes[type] || 'Unknown';
   };
@@ -488,6 +562,8 @@ function RoomCard({ roomId }: { roomId: number }) {
       0: 'Waiting',
       1: 'In Progress',
       2: 'Completed',
+      3: 'Expired',
+      4: 'Canceled'
     };
     return statusTypes[status] || 'Unknown';
   };
@@ -497,8 +573,61 @@ function RoomCard({ roomId }: { roomId: number }) {
       0: 'text-yellow-400',
       1: 'text-neon-blue',
       2: 'text-neon-green',
+      3: 'text-red-400',
+      4: 'text-gray-400'
     };
     return statusColors[status] || 'text-white';
+  };
+  
+  // Handle clicking on a room card with proper navigation to games page with room ID
+  const handleRoomClick = () => {
+    if (room && room.id) {
+      try {
+        // Always use Number() for consistent conversion
+        const numericRoomId = Number(room.id);
+        console.log(`Navigating to room ${numericRoomId} (${typeof numericRoomId}) with status: ${room.status}`);
+        
+        if (isNaN(numericRoomId) || numericRoomId <= 0) {
+          console.error(`Invalid room ID: ${room.id}`);
+          return;
+        }
+        
+        // Use router navigation for consistent client-side navigation experience
+        router.push(`/games`);
+        
+        // We need to handle setting the active room after navigation
+        // Store the room ID in sessionStorage so the games page can pick it up
+        sessionStorage.setItem('pendingRoomId', numericRoomId.toString());
+        
+      } catch (err) {
+        console.error('Error processing room ID:', err);
+      }
+    }
+  };
+  
+  // Update the button text and actions based on room status
+  const getRoomActionText = (status: number, isCreator: boolean) => {
+    // Status 0 = Waiting/Pending
+    if (status === 0) {
+      if (isCreator) {
+        return "Set Score →";
+      } else {
+        return "Join Game →";
+      }
+    }
+    
+    // Status 1 = In Progress
+    if (status === 1) {
+      return "Return to Game →";
+    }
+    
+    // Status 2 = Completed
+    if (status === 2) {
+      return "View Results →";
+    }
+    
+    // Other statuses
+    return "View Room →";
   };
   
   if (loading) {
@@ -509,16 +638,19 @@ function RoomCard({ roomId }: { roomId: number }) {
     );
   }
   
-  if (!room) {
+  if (error || !room) {
     return (
       <div className="bg-black/30 border border-gray-700 rounded-md p-4 h-40 flex items-center justify-center">
-        <p className="text-gray-400">Room not found</p>
+        <p className="text-red-400">{error || "Failed to load room"}</p>
       </div>
     );
   }
   
   return (
-    <div className="bg-black/30 border border-gray-700 hover:border-neon-blue transition-colors duration-200 rounded-md p-4">
+    <div 
+      className="bg-black/30 border border-gray-700 hover:border-neon-blue transition-colors duration-200 rounded-md p-4 cursor-pointer"
+      onClick={handleRoomClick}
+    >
       <div className="flex justify-between items-start">
         <h3 className="text-lg font-arcade text-white mb-2">{room.name || `Room #${roomId}`}</h3>
         <span className={`px-2 py-1 rounded text-xs ${getStatusColor(room.status)}`}>
@@ -531,21 +663,51 @@ function RoomCard({ roomId }: { roomId: number }) {
           <span className="text-gray-500">Game:</span> {getGameTypeName(room.gameType)}
         </p>
         <p className="text-sm text-gray-400">
-          <span className="text-gray-500">Buy-in:</span> {room.buyIn.toLocaleString()} points
+          <span className="text-gray-500">Buy-in:</span> {parseInt(room.entryFee).toLocaleString()} points
         </p>
         <p className="text-sm text-gray-400">
           <span className="text-gray-500">Players:</span> {room.currentPlayers}/{room.maxPlayers}
         </p>
+        
+        {room.status === 2 && room.winner && (
+          <p className="text-sm text-gray-400">
+            <span className="text-gray-500">Winner:</span> 
+            <span className={walletAddress && room.winner.toLowerCase() === walletAddress.toLowerCase() 
+              ? "text-neon-green" 
+              : "text-gray-300"
+            }>
+              {walletAddress && room.winner.toLowerCase() === walletAddress.toLowerCase() 
+                ? 'You!' 
+                : `${room.winner.slice(0, 6)}...${room.winner.slice(-4)}`
+              }
+            </span>
+          </p>
+        )}
+        
+        {room.userScore !== null && (
+          <p className="text-sm text-gray-400">
+            <span className="text-gray-500">Your Score:</span> <span className="text-neon-pink">{room.userScore}</span>
+          </p>
+        )}
+        
+        {room.isCreator && (
+          <p className="text-sm text-neon-blue">
+            You created this room
+          </p>
+        )}
       </div>
       
-      <Link 
-        href={`/game/${roomId}`}
-        className="text-neon-blue text-sm hover:underline inline-block"
-      >
-        {room.status === 0 ? 'Join Game →' :
-         room.status === 1 ? 'Return to Game →' :
-         'View Results →'}
-      </Link>
+      <div className="flex justify-end">
+        <button 
+          className="text-neon-blue text-sm hover:underline flex items-center"
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent double navigation
+            handleRoomClick();
+          }}
+        >
+          {getRoomActionText(room.status, room.isCreator)}
+        </button>
+      </div>
     </div>
   );
 }

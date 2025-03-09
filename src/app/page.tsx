@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const { login, authenticated } = usePrivy();
+  const { login, authenticated, ready, user } = usePrivy();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -319,10 +321,14 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.3 }}
           >
             <button 
-              onClick={authenticated ? () => window.location.href = '/games' : () => login()} 
-              className="arcade-button-large"
+              className="hero-button bg-gradient-to-r from-neon-blue to-neon-pink text-black font-arcade text-lg py-4 px-12 rounded-lg shadow-lg hover:shadow-xl transform transition hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={authenticated ? 
+                () => router.push('/games') : 
+                () => login()
+              }
+              disabled={!ready}
             >
-              {authenticated ? 'ENTER THE ARCADE' : 'CONNECT WALLET TO BEGIN'}
+              {authenticated ? 'PLAY NOW' : 'CONNECT WALLET'}
             </button>
           </motion.div>
         </div>

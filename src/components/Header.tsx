@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { usePoints } from '@/app/contexts/PointsContext';
 import { useWallet } from '@/app/contexts/WalletContext';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const { authenticated } = usePrivy();
@@ -15,9 +16,18 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const router = useRouter();
 
   const handleAddressClick = () => {
     setShowUserMenu(!showUserMenu);
+  };
+
+  // Handle navigation click using router.push
+  const handleNavClick = (path: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(false); // Close mobile menu if open
+    setShowUserMenu(false); // Close user menu if open
+    router.push(path);
   };
 
   useEffect(() => {
@@ -52,7 +62,11 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <a 
+            href="/" 
+            className="flex items-center cursor-pointer"
+            onClick={(e) => handleNavClick('/', e)}
+          >
             <Image 
               src="/corecade-logo.png" 
               alt="CoreCade" 
@@ -61,18 +75,19 @@ export default function Header() {
               className="mr-2"
             />
             <span className="font-arcade text-xl text-white hidden sm:block">CORECADE</span>
-          </Link>
+          </a>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
-              <Link 
+              <a
                 key={link.name}
                 href={link.path}
                 className="font-arcade text-sm text-white hover:text-neon-pink transition-colors duration-200"
+                onClick={(e) => handleNavClick(link.path, e)}
               >
                 {link.name}
-              </Link>
+              </a>
             ))}
           </nav>
           
@@ -102,13 +117,13 @@ export default function Header() {
                 {/* User Dropdown Menu */}
                 {showUserMenu && (
                   <div className="absolute right-0 top-10 w-48 bg-black/90 backdrop-blur-md border border-neon-pink rounded-md shadow-lg z-50 py-1">
-                    <Link 
+                    <a 
                       href="/dashboard" 
-                      className="block px-4 py-2 text-sm text-white hover:bg-neon-pink/20 transition-colors"
-                      onClick={() => setShowUserMenu(false)}
+                      className="block px-4 py-2 text-sm text-white hover:bg-neon-pink/20 transition-colors cursor-pointer"
+                      onClick={(e) => handleNavClick('/dashboard', e)}
                     >
                       Dashboard
-                    </Link>
+                    </a>
                     <button 
                       onClick={() => {
                         disconnectWallet();
@@ -150,14 +165,14 @@ export default function Header() {
         {menuOpen && (
           <div className="md:hidden bg-black/90 backdrop-blur-md mt-2 py-2 px-4 rounded-md border border-neon-blue">
             {navLinks.map((link) => (
-              <Link 
+              <a 
                 key={link.name}
                 href={link.path}
                 className="block py-2 font-arcade text-white hover:text-neon-pink transition-colors"
-                onClick={() => setMenuOpen(false)}
+                onClick={(e) => handleNavClick(link.path, e)}
               >
                 {link.name}
-              </Link>
+              </a>
             ))}
           </div>
         )}
