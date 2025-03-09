@@ -15,6 +15,7 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   // Game constants
   const GRAVITY = 0.6;
@@ -33,10 +34,16 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
 
     // Set up the game
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      setLoadingError("Canvas element not found");
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      setLoadingError("Unable to get canvas context");
+      return;
+    }
 
     // Game state variables
     let bird = {
@@ -59,7 +66,7 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     let lastTimestamp = 0;
     let currentScore = 0;
 
-    // Load images
+    // Load images with error handling
     const birdImg = new Image();
     const pipeTopImg = new Image();
     const pipeBottomImg = new Image();
@@ -73,10 +80,25 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     // Set ready state when images are loaded
     let imagesLoaded = 0;
     const totalImages = 4;
+    let failedImages = 0;
 
     const handleImageLoad = () => {
       imagesLoaded++;
-      if (imagesLoaded === totalImages) {
+      checkAllImagesLoaded();
+    };
+
+    const handleImageError = (e: ErrorEvent, imageName: string) => {
+      failedImages++;
+      console.error(`Failed to load image: ${imageName}`, e);
+      checkAllImagesLoaded();
+    };
+
+    const checkAllImagesLoaded = () => {
+      // Proceed if all images loaded or all attempts completed
+      if (imagesLoaded + failedImages === totalImages) {
+        if (failedImages > 0) {
+          console.warn(`Some images failed to load (${failedImages}/${totalImages}), but proceeding with game`);
+        }
         setIsReady(true);
       }
     };
@@ -85,6 +107,22 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
     pipeTopImg.onload = handleImageLoad;
     pipeBottomImg.onload = handleImageLoad;
     backgroundImg.onload = handleImageLoad;
+
+    birdImg.onerror = (e) => handleImageError(e as ErrorEvent, 'bird');
+    pipeTopImg.onerror = (e) => handleImageError(e as ErrorEvent, 'pipeTop');
+    pipeBottomImg.onerror = (e) => handleImageError(e as ErrorEvent, 'pipeBottom');
+    backgroundImg.onerror = (e) => handleImageError(e as ErrorEvent, 'background');
+
+    // Use fallback colors if images fail to load
+    const renderImage = (img: HTMLImageElement, x: number, y: number, width: number, height: number, fallbackColor: string) => {
+      if (img.complete && img.naturalHeight !== 0) {
+        ctx.drawImage(img, x, y, width, height);
+      } else {
+        // Fallback rendering
+        ctx.fillStyle = fallbackColor;
+        ctx.fillRect(x, y, width, height);
+      }
+    };
 
     // Handle user input
     const handleInput = () => {
@@ -127,11 +165,11 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Draw background
-      ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+      renderImage(backgroundImg, 0, 0, canvas.width, canvas.height, '#87CEEB');
 
       if (!gameStarted) {
         // Draw bird stationary
-        ctx.drawImage(birdImg, bird.x - bird.width / 2, bird.y - bird.height / 2, bird.width, bird.height);
+        renderImage(birdImg, bird.x - bird.width / 2, bird.y - bird.height / 2, bird.width, bird.height, '#FFD700');
         
         // Draw "Press Space to Start" text
         ctx.font = '24px "Press Start 2P", cursive';
@@ -151,7 +189,7 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
       ctx.save();
       ctx.translate(bird.x, bird.y);
       ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, bird.velocity * 0.04)));
-      ctx.drawImage(birdImg, -bird.width / 2, -bird.height / 2, bird.width, bird.height);
+      renderImage(birdImg, -bird.width / 2, -bird.height / 2, bird.width, bird.height, '#FFD700');
       ctx.restore();
 
       // Update pipes
@@ -160,10 +198,10 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
         pipe.x -= PIPE_SPEED;
 
         // Draw top pipe
-        ctx.drawImage(pipeTopImg, pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+        renderImage(pipeTopImg, pipe.x, 0, PIPE_WIDTH, pipe.topHeight, '#75B855');
         
         // Draw bottom pipe
-        ctx.drawImage(pipeBottomImg, pipe.x, pipe.bottomY, PIPE_WIDTH, canvas.height - pipe.bottomY);
+        renderImage(pipeBottomImg, pipe.x, pipe.bottomY, PIPE_WIDTH, canvas.height - pipe.bottomY, '#75B855');
 
         // Check if pipe is past the bird
         if (!pipe.counted && pipe.x + PIPE_WIDTH < bird.x) {
@@ -172,9 +210,13 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
           pipe.counted = true;
 
           // Add sound effect for scoring
-          const scoreSound = new Audio('/sounds/score.mp3');
-          scoreSound.volume = 0.3;
-          scoreSound.play().catch(() => {}); // Ignore errors from browsers that block autoplay
+          try {
+            const scoreSound = new Audio('/sounds/score.wav');
+            scoreSound.volume = 0.3;
+            scoreSound.play().catch(err => console.warn('Could not play score sound', err));
+          } catch (error) {
+            console.warn('Error playing score sound', error);
+          }
         }
 
         // Check for collisions
@@ -263,9 +305,13 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
         generatePipe();
         
         // Play start sound
-        const startSound = new Audio('/sounds/start.mp3');
-        startSound.volume = 0.5;
-        startSound.play().catch(() => {}); // Ignore errors from browsers that block autoplay
+        try {
+          const startSound = new Audio('/sounds/start.wav');
+          startSound.volume = 0.5;
+          startSound.play().catch(err => console.warn('Could not play start sound', err));
+        } catch (error) {
+          console.warn('Error playing start sound', error);
+        }
       }
     };
 
@@ -274,9 +320,13 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
         setGameOver(true);
         
         // Play crash sound
-        const crashSound = new Audio('/sounds/crash.mp3');
-        crashSound.volume = 0.5;
-        crashSound.play().catch(() => {}); // Ignore errors from browsers that block autoplay
+        try {
+          const crashSound = new Audio('/sounds/crash.wav');
+          crashSound.volume = 0.5;
+          crashSound.play().catch(err => console.warn('Could not play crash sound', err));
+        } catch (error) {
+          console.warn('Error playing crash sound', error);
+        }
         
         // Update high score
         if (currentScore > highScore) {
@@ -328,9 +378,9 @@ export default function FlappyBird({ onGameOver, onStart }: FlappyBirdProps) {
       ctx.font = '20px "Press Start 2P", cursive';
       ctx.fillStyle = '#00f3ff';
       ctx.textAlign = 'center';
-      ctx.fillText('LOADING...', canvas.width / 2, canvas.height / 2);
+      ctx.fillText(loadingError || 'LOADING...', canvas.width / 2, canvas.height / 2);
     }
-  }, [isReady]);
+  }, [isReady, loadingError]);
 
   return (
     <div className="flex flex-col items-center w-full">
