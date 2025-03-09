@@ -235,6 +235,28 @@ export default function DashboardPage() {
                     </p>
                   )}
                 </div>
+
+                <div className="bg-black/30 border border-neon-blue p-6 rounded-md">
+                  <p className="text-gray-400 text-sm mb-2">Equivalent CORE Balance</p>
+                  <div className="flex items-end">
+                    <p className="text-3xl font-arcade text-neon-blue">
+                      {isLoading || pointsLoading ? (
+                        <span className="loading-dots">
+                          <span>.</span><span>.</span><span>.</span>
+                        </span>
+                      ) : (
+                        (balance / 1000).toFixed(3)
+                      )}
+                    </p>
+                    <p className="ml-2 text-gray-400 mb-1">CORE</p>
+                  </div>
+                  
+                  {!isLoadingPrice && corePrice > 0 && (
+                    <p className="text-gray-500 text-sm mt-2">
+                      ≈ ${((balance / 1000) * corePrice).toFixed(2)} USD
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
             
