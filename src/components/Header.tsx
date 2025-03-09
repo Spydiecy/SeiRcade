@@ -3,19 +3,43 @@
 import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 export default function Header() {
   const { login, logout, authenticated, user } = usePrivy();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const handleAddressClick = () => {
     setShowUserMenu(!showUserMenu);
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: 'HOME', path: '/' },
+    { name: 'GAMES', path: '/games' },
+    { name: 'LEADERBOARD', path: '/leaderboard' },
+    { name: 'ABOUT', path: '/about' },
+  ];
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/60 border-b-2 border-neon-blue">
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled ? 'backdrop-blur-md bg-black/80 border-b-2 border-neon-blue shadow-md' : 'bg-black/40 backdrop-blur-sm'
+    }`}>
       <div className="container mx-auto py-4 px-4 flex justify-between items-center">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -23,14 +47,20 @@ export default function Header() {
           transition={{ duration: 0.5 }}
           className="flex items-center"
         >
-          <div className="w-10 h-10 md:w-12 md:h-12 relative mr-3">
-            <div className="w-full h-full arcade-box-glow flex items-center justify-center">
-              <span className="text-base md:text-xl font-arcade text-white">C</span>
+          <Link href="/" className="flex items-center">
+            <div className="w-10 h-10 md:w-12 md:h-12 relative mr-3">
+              <Image 
+                src="/images/logo.svg" 
+                alt="CoreCade Logo" 
+                width={48} 
+                height={48} 
+                priority 
+              />
             </div>
-          </div>
-          <h1 className="text-xl md:text-2xl font-arcade neon-text">
-            CORECADE
-          </h1>
+            <h1 className="text-xl md:text-2xl font-arcade neon-text">
+              CORECADE
+            </h1>
+          </Link>
         </motion.div>
         
         {/* Mobile menu button */}
@@ -53,15 +83,11 @@ export default function Header() {
           className="hidden md:flex gap-4 items-center"
         >
           <div className="flex space-x-6 items-center">
-            <Link href="/" className="nav-link">
-              HOME
-            </Link>
-            <Link href="/games" className="nav-link">
-              GAMES
-            </Link>
-            <Link href="/leaderboard" className="nav-link">
-              LEADERBOARD
-            </Link>
+            {navLinks.map((link) => (
+              <Link key={link.path} href={link.path} className="nav-link">
+                {link.name}
+              </Link>
+            ))}
           </div>
           
           {authenticated ? (
@@ -70,12 +96,18 @@ export default function Header() {
                 onClick={handleAddressClick}
                 className="text-xs font-arcade text-neon-green pixel-box cursor-pointer"
               >
-                <span className="text-neon-blue">PLAYER:</span> {user?.email?.toString() || (user?.wallet?.address && `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}`)}
+                <span className="text-neon-blue">PLAYER:</span> {String(user?.email || (user?.wallet?.address && `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}`))}
               </div>
               
               {/* User menu dropdown */}
               {showUserMenu && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-black border-2 border-neon-blue p-2 z-50">
+                  <Link href="/profile" className="block py-2 px-3 text-xs font-arcade text-white hover:bg-neon-blue/20">
+                    PROFILE
+                  </Link>
+                  <Link href="/dashboard" className="block py-2 px-3 text-xs font-arcade text-white hover:bg-neon-blue/20">
+                    DASHBOARD
+                  </Link>
                   <button 
                     onClick={() => {
                       logout();
@@ -113,22 +145,29 @@ export default function Header() {
           className="md:hidden border-t border-neon-blue/30 bg-black/80 backdrop-blur-md"
         >
           <div className="flex flex-col items-center py-4 space-y-4">
-            <Link href="/" className="nav-link" onClick={() => setMenuOpen(false)}>
-              HOME
-            </Link>
-            <Link href="/games" className="nav-link" onClick={() => setMenuOpen(false)}>
-              GAMES
-            </Link>
-            <Link href="/leaderboard" className="nav-link" onClick={() => setMenuOpen(false)}>
-              LEADERBOARD
-            </Link>
+            {navLinks.map((link) => (
+              <Link 
+                key={link.path}
+                href={link.path} 
+                className="nav-link" 
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.name}
+              </Link>
+            ))}
             
             {authenticated ? (
               <>
+                <Link href="/profile" className="w-4/5 arcade-button-pink text-center mb-2" onClick={() => setMenuOpen(false)}>
+                  PROFILE
+                </Link>
+                <Link href="/dashboard" className="w-4/5 arcade-button-blue text-center mb-2" onClick={() => setMenuOpen(false)}>
+                  DASHBOARD
+                </Link>
                 <button onClick={() => {
                   logout();
                   setMenuOpen(false);
-                }} className="w-4/5 text-center arcade-button-pink">
+                }} className="w-4/5 text-center arcade-button-green">
                   DISCONNECT
                 </button>
               </>
