@@ -1,14 +1,11 @@
+'use client';
+
 import './globals.css';
 import { Inter } from 'next/font/google';
-import type { Metadata } from 'next';
-import MainLayout from '@/components/layout/MainLayout';
+import Header from '@/components/Header';
+import Providers from './providers';
 
 const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'Tanishq | Portfolio',
-  description: 'My personal portfolio showcasing my work and skills',
-};
 
 export default function RootLayout({
   children,
@@ -17,10 +14,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className={inter.className}>
-        <MainLayout>
-          {children}
-        </MainLayout>
+        <Providers>
+          <div className="min-h-screen arcade-bg">
+            <Header />
+            <main className="pt-20 relative z-20">
+              {children}
+            </main>
+            <footer className="py-8 text-center text-gray-500 font-arcade text-xs">
+              <p>© 2025 CoreCade | Built on Core Blockchain</p>
+            </footer>
+          </div>
+        </Providers>
       </body>
     </html>
   );

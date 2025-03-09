@@ -3,10 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --blue-gradient: linear-gradient(to right, #4f46e5, #2563eb);
-  --purple-gradient: linear-gradient(to right, #7e22ce, #a855f7);
+  --neon-blue: #00f3ff;
+  --neon-blue-rgb: 0, 243, 255;
+  --neon-green: #00ff66;
+  --neon-green-rgb: 0, 255, 102;
+  --neon-pink: #ff00ff;
+  --neon-pink-rgb: 255, 0, 255;
+  --neon-purple: #9d00ff;
+  --neon-purple-rgb: 157, 0, 255;
 }
 
+/* Fonts */
 @font-face {
   font-family: 'Press Start 2P';
   font-style: normal;
@@ -15,163 +22,699 @@
   font-display: swap;
 }
 
-body {
-  @apply text-white font-sans;
+.font-arcade {
+  font-family: 'Press Start 2P', cursive;
+  letter-spacing: 1px;
+}
+
+/* Background */
+.arcade-bg {
   background-color: #000000;
-  background-image: radial-gradient(circle at 50% 50%, rgba(17, 24, 39, 1), rgba(0, 0, 0, 1));
-}
-
-/* Arcade Button Styles */
-.btn-arcade {
-  @apply inline-block px-6 py-2 text-sm font-arcade text-white rounded-md shadow-lg transition-all duration-200 hover:shadow-blue-700/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.5);
-  box-shadow: 0 0 10px rgba(79, 70, 229, 0.5), inset 0 0 10px rgba(79, 70, 229, 0.2);
-  border: 2px solid rgba(79, 70, 229, 0.8);
-  background-color: #4338ca; /* Indigo-700 */
-}
-
-.btn-arcade:hover {
-  background-color: #3730a3; /* Indigo-800 */
-}
-
-.btn-arcade-lg {
-  @apply inline-block px-8 py-3 text-base font-arcade text-white rounded-md shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.5);
-  box-shadow: 0 0 15px rgba(79, 70, 229, 0.5), inset 0 0 10px rgba(79, 70, 229, 0.2);
-  border: 2px solid rgba(79, 70, 229, 0.8);
-}
-
-.btn-arcade-sm {
-  @apply inline-block px-4 py-2 text-xs font-arcade text-white rounded-md shadow-lg transition-all duration-200 hover:shadow-blue-700/50 focus:outline-none;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.5);
-  box-shadow: 0 0 8px rgba(79, 70, 229, 0.5), inset 0 0 8px rgba(79, 70, 229, 0.2);
-  border: 2px solid rgba(79, 70, 229, 0.8);
-  background-color: #4338ca; /* Indigo-700 */
-}
-
-.btn-arcade-sm:hover {
-  background-color: #3730a3; /* Indigo-800 */
-}
-
-/* Star Background */
-.star-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: radial-gradient(2px 2px at 20px 30px, white, rgba(0,0,0,0)), 
-                    radial-gradient(2px 2px at 40px 70px, white, rgba(0,0,0,0)),
-                    radial-gradient(2px 2px at 50px 160px, white, rgba(0,0,0,0)),
-                    radial-gradient(2px 2px at 90px 40px, white, rgba(0,0,0,0)),
-                    radial-gradient(2px 2px at 130px 80px, white, rgba(0,0,0,0)),
-                    radial-gradient(2px 2px at 160px 120px, white, rgba(0,0,0,0));
-  background-repeat: repeat;
-  background-size: 200px 200px;
-  animation: twinkle 5s infinite;
-}
-
-@keyframes twinkle {
-  0% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
-  }
-}
-
-/* Neon Text Effect */
-.neon-text {
-  @apply font-arcade text-transparent bg-clip-text;
-  background-image: linear-gradient(to right, #4f46e5, #2563eb, #4f46e5);
-  text-shadow: 0 0 5px rgba(79, 70, 229, 0.5), 
-               0 0 10px rgba(79, 70, 229, 0.5),
-               0 0 15px rgba(79, 70, 229, 0.5);
-  animation: neon-pulse 2s infinite;
-}
-
-@keyframes neon-pulse {
-  0%, 100% {
-    text-shadow: 0 0 5px rgba(79, 70, 229, 0.5), 
-                 0 0 10px rgba(79, 70, 229, 0.5),
-                 0 0 15px rgba(79, 70, 229, 0.5);
-  }
-  50% {
-    text-shadow: 0 0 10px rgba(79, 70, 229, 0.8), 
-                 0 0 20px rgba(79, 70, 229, 0.8),
-                 0 0 30px rgba(79, 70, 229, 0.8);
-  }
-}
-
-/* Retro Card */
-.retro-card {
-  background-color: #111827; /* Gray-900 */
-  @apply rounded-lg overflow-hidden border-2 border-blue-800;
-  box-shadow: 0 0 15px rgba(79, 70, 229, 0.3), inset 0 0 10px rgba(79, 70, 229, 0.1);
-}
-
-/* Scanlines effect */
-.scanlines {
+  background-image: 
+    radial-gradient(circle at 40% 40%, rgba(0, 243, 255, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 60% 60%, rgba(255, 0, 255, 0.08) 0%, transparent 40%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 1), rgba(10, 10, 30, 1));
   position: relative;
   overflow: hidden;
 }
 
-.scanlines:before {
+.arcade-bg::before {
   content: "";
   position: absolute;
-  width: 100%;
-  height: 100%;
   top: 0;
   left: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(255, 255, 255, 0.03) 0.5%,
-    transparent 1%
-  );
-  animation: scanlines 8s linear infinite;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    url("data:image/svg+xml,%3Csvg width='2' height='2' viewBox='0 0 2 2' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M1 0H0v1h1V0zm0 1H1v1h1V1z' fill='rgba(255,255,255,0.05)'/%3E%3C/svg%3E");
+  opacity: 0.2;
   pointer-events: none;
-  z-index: 10;
 }
 
-@keyframes scanlines {
+/* Grid overlay */
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(to right, rgba(var(--neon-blue-rgb), 0.05) 1px, transparent 1px),
+                     linear-gradient(to bottom, rgba(var(--neon-blue-rgb), 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Animated lines */
+.animated-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.animated-lines::before,
+.animated-lines::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 200%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    var(--neon-blue), 
+    var(--neon-purple), 
+    var(--neon-pink), 
+    var(--neon-purple), 
+    var(--neon-blue));
+  animation: line-scroll 20s linear infinite;
+  opacity: 0.3;
+}
+
+.animated-lines::before {
+  top: 30%;
+}
+
+.animated-lines::after {
+  bottom: 60%;
+  animation-duration: 15s;
+  animation-delay: -5s;
+}
+
+@keyframes line-scroll {
   0% {
-    background-position: 0 0;
+    transform: translateX(0);
   }
   100% {
-    background-position: 0 100%;
+    transform: translateX(-50%);
   }
 }
 
-.font-arcade {
+/* Pixel footer */
+.pixel-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--neon-blue) 0%,
+    var(--neon-blue) 20%,
+    var(--neon-pink) 20%,
+    var(--neon-pink) 40%,
+    var(--neon-green) 40%,
+    var(--neon-green) 60%,
+    var(--neon-purple) 60%,
+    var(--neon-purple) 80%,
+    var(--neon-blue) 80%,
+    var(--neon-blue) 100%
+  );
+  box-shadow: 0 0 15px rgba(var(--neon-blue-rgb), 0.5);
+}
+
+/* Scanner effect */
+.scanner-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(to right, 
+    transparent, 
+    rgba(0, 243, 255, 0.3), 
+    rgba(0, 243, 255, 0.5), 
+    rgba(0, 243, 255, 0.3),
+    transparent);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+  z-index: 10;
+  animation: scan 8s linear infinite;
+}
+
+@keyframes scan {
+  0% {
+    top: 0%;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+/* Diagonal divider */
+.diagonal-divider {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, transparent 49.5%, #000 49.5%, #000 50.5%, transparent 50.5%);
+}
+
+/* Game controller and coin icons */
+.controller-icon {
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='60' viewBox='0 0 100 60' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='10' y='10' width='80' height='40' rx='20' fill='rgba(0,0,0,0.5)' stroke='%2300f3ff' stroke-width='2'/%3E%3Ccircle cx='70' cy='25' r='5' fill='%23ff00ff'/%3E%3Ccircle cx='80' cy='35' r='5' fill='%2300ff66'/%3E%3Crect x='20' y='20' width='5' height='20' fill='%2300f3ff'/%3E%3Crect x='12.5' y='27.5' width='20' height='5' fill='%2300f3ff'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 0 5px rgba(var(--neon-blue-rgb), 0.7));
+}
+
+.coin-icon {
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='48' height='48' viewBox='0 0 48 48' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='24' cy='24' r='20' fill='rgba(0,0,0,0.5)' stroke='%23FFD700' stroke-width='4'/%3E%3Ctext x='24' y='28' font-family='Arial' font-size='16' fill='%23FFD700' text-anchor='middle'%3E$%3C/text%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
+}
+
+.icon-glow {
+  color: currentColor;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+/* Neon text effects */
+.neon-text {
+  color: #fff;
+  text-shadow:
+    0 0 5px rgba(255, 255, 255, 0.8),
+    0 0 10px rgba(255, 255, 255, 0.5),
+    0 0 15px rgba(0, 243, 255, 0.5),
+    0 0 20px rgba(0, 243, 255, 0.3),
+    0 0 30px rgba(0, 243, 255, 0.2);
+}
+
+.neon-text-blue {
+  color: var(--neon-blue);
+  text-shadow:
+    0 0 5px rgba(0, 243, 255, 0.8),
+    0 0 10px rgba(0, 243, 255, 0.5),
+    0 0 15px rgba(0, 243, 255, 0.3);
+}
+
+.neon-text-green {
+  color: var(--neon-green);
+  text-shadow:
+    0 0 5px rgba(0, 255, 102, 0.8),
+    0 0 10px rgba(0, 255, 102, 0.5),
+    0 0 15px rgba(0, 255, 102, 0.3);
+}
+
+.neon-text-pink {
+  color: var(--neon-pink);
+  text-shadow:
+    0 0 5px rgba(255, 0, 255, 0.8),
+    0 0 10px rgba(255, 0, 255, 0.5),
+    0 0 15px rgba(255, 0, 255, 0.3);
+}
+
+/* Hero text effect */
+.arcade-hero-text {
+  color: #fff;
+  text-shadow: 
+    0 0 5px #fff,
+    0 0 10px #fff,
+    0 0 15px var(--neon-blue),
+    0 0 20px var(--neon-blue),
+    0 0 25px var(--neon-pink);
+  position: relative;
+  letter-spacing: 2px;
+}
+
+.arcade-hero-text::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--neon-blue-rgb), 0.2) 10%,
+    transparent 20%
+  );
+  animation: hero-shine 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes hero-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Glitch text effect */
+.glitch-text {
+  position: relative;
+  color: #fff;
+  text-shadow: 
+    0 0 5px #fff,
+    0 0 10px #fff,
+    0 0 15px var(--neon-blue),
+    0 0 20px var(--neon-blue);
+  animation: glitch 2s linear infinite alternate;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch-text::before {
+  left: 2px;
+  color: var(--neon-pink);
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+  animation: glitch-1 3s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+  left: -2px;
+  color: var(--neon-blue);
+  clip-path: polygon(0 60%, 100% 60%, 100% 100%, 0 100%);
+  animation: glitch-2 2.7s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-1 {
+  0%, 5%, 10% {
+    transform: translate(0);
+  }
+  1%, 9% {
+    transform: translate(-2px, 0);
+  }
+  4%, 6% {
+    transform: translate(2px, 0);
+  }
+}
+
+@keyframes glitch-2 {
+  0%, 5%, 10% {
+    transform: translate(0);
+  }
+  3%, 7% {
+    transform: translate(4px, 0);
+  }
+  6% {
+    transform: translate(-4px, 0);
+  }
+}
+
+/* Pixelated text */
+.pixel-text {
   font-family: 'Press Start 2P', cursive;
+  letter-spacing: 2px;
+  line-height: 1.6;
 }
 
-/* Loading Animation */
-.loading {
-  @apply flex justify-center items-center;
+.cyberpunk-text {
+  line-height: 1.6;
+  letter-spacing: 0.5px;
 }
 
-.loading:after {
-  content: " ";
-  display: block;
-  width: 64px;
-  height: 64px;
-  margin: 8px;
-  border-radius: 50%;
-  border: 6px solid #4f46e5;
-  border-color: #4f46e5 transparent #4f46e5 transparent;
-  animation: loading 1.2s linear infinite;
+/* Arcade elements */
+.arcade-box-glow {
+  background-color: #000;
+  border: 2px solid var(--neon-blue);
+  border-radius: 4px;
+  box-shadow: 
+    0 0 5px rgba(0, 243, 255, 0.5),
+    0 0 10px rgba(0, 243, 255, 0.3),
+    inset 0 0 5px rgba(0, 243, 255, 0.2);
 }
 
-@keyframes loading {
+.game-card {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 
+    0 5px 20px rgba(0, 0, 0, 0.5),
+    0 0 15px rgba(0, 243, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.step-card {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+  height: 100%;
+}
+
+.pixel-box {
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--neon-blue);
+  padding: 0.5rem 1rem;
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+  border-radius: 2px;
+}
+
+.pixel-element {
+  transform-style: preserve-3d;
+  transform-origin: center;
+}
+
+/* Navigation links */
+.nav-link {
+  position: relative;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  color: #888;
+  transition: color 0.3s;
+  padding: 0.5rem 0;
+}
+
+.nav-link:hover {
+  color: var(--neon-blue);
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background-color: var(--neon-blue);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* Border styles */
+.border-neon-blue {
+  border-color: var(--neon-blue);
+}
+
+.border-neon-green {
+  border-color: var(--neon-green);
+}
+
+.border-neon-pink {
+  border-color: var(--neon-pink);
+}
+
+/* Text colors */
+.text-neon-blue {
+  color: var(--neon-blue);
+}
+
+.text-neon-green {
+  color: var(--neon-green);
+}
+
+.text-neon-pink {
+  color: var(--neon-pink);
+}
+
+/* Buttons */
+.arcade-button-blue {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--neon-blue);
+  color: var(--neon-blue);
+  padding: 0.5rem 1rem;
+  box-shadow: 
+    0 0 5px rgba(0, 243, 255, 0.5),
+    0 0 10px rgba(0, 243, 255, 0.3),
+    inset 0 0 5px rgba(0, 243, 255, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+}
+
+.arcade-button-blue:hover {
+  background-color: rgba(0, 243, 255, 0.1);
+  box-shadow: 
+    0 0 10px rgba(0, 243, 255, 0.7),
+    0 0 20px rgba(0, 243, 255, 0.4),
+    inset 0 0 10px rgba(0, 243, 255, 0.4);
+}
+
+.arcade-button-green {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--neon-green);
+  color: var(--neon-green);
+  padding: 0.5rem 1rem;
+  box-shadow: 
+    0 0 5px rgba(0, 255, 102, 0.5),
+    0 0 10px rgba(0, 255, 102, 0.3),
+    inset 0 0 5px rgba(0, 255, 102, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+}
+
+.arcade-button-green:hover {
+  background-color: rgba(0, 255, 102, 0.1);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 102, 0.7),
+    0 0 20px rgba(0, 255, 102, 0.4),
+    inset 0 0 10px rgba(0, 255, 102, 0.4);
+}
+
+.arcade-button-pink {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--neon-pink);
+  color: var(--neon-pink);
+  padding: 0.5rem 1rem;
+  box-shadow: 
+    0 0 5px rgba(255, 0, 255, 0.5),
+    0 0 10px rgba(255, 0, 255, 0.3),
+    inset 0 0 5px rgba(255, 0, 255, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+}
+
+.arcade-button-pink:hover {
+  background-color: rgba(255, 0, 255, 0.1);
+  box-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.7),
+    0 0 20px rgba(255, 0, 255, 0.4),
+    inset 0 0 10px rgba(255, 0, 255, 0.4);
+}
+
+.arcade-button-glow-blue {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.8rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--neon-blue);
+  color: var(--neon-blue);
+  padding: 1rem 2rem;
+  box-shadow: 
+    0 0 10px rgba(0, 243, 255, 0.5),
+    0 0 20px rgba(0, 243, 255, 0.3),
+    inset 0 0 5px rgba(0, 243, 255, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  position: relative;
+  text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+  overflow: hidden;
+}
+
+.arcade-button-glow-blue::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  background: linear-gradient(45deg, var(--neon-blue), transparent, var(--neon-blue));
+  z-index: -1;
+  animation: rotate-blue 3s linear infinite;
+}
+
+.arcade-button-glow-blue:hover {
+  background-color: rgba(0, 243, 255, 0.1);
+  box-shadow: 
+    0 0 15px rgba(0, 243, 255, 0.7),
+    0 0 30px rgba(0, 243, 255, 0.4),
+    inset 0 0 10px rgba(0, 243, 255, 0.4);
+  transform: translateY(-3px);
+}
+
+@keyframes rotate-blue {
   0% {
     transform: rotate(0deg);
   }
   100% {
     transform: rotate(360deg);
   }
+}
+
+.arcade-button-glow-pink {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.8rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--neon-pink);
+  color: var(--neon-pink);
+  padding: 1rem 2rem;
+  box-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.5),
+    0 0 20px rgba(255, 0, 255, 0.3),
+    inset 0 0 5px rgba(255, 0, 255, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  position: relative;
+  text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+  overflow: hidden;
+}
+
+.arcade-button-glow-pink::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  background: linear-gradient(45deg, var(--neon-pink), transparent, var(--neon-pink));
+  z-index: -1;
+  animation: rotate-pink 3s linear infinite;
+}
+
+.arcade-button-glow-pink:hover {
+  background-color: rgba(255, 0, 255, 0.1);
+  box-shadow: 
+    0 0 15px rgba(255, 0, 255, 0.7),
+    0 0 30px rgba(255, 0, 255, 0.4),
+    inset 0 0 10px rgba(255, 0, 255, 0.4);
+  transform: translateY(-3px);
+}
+
+@keyframes rotate-pink {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.arcade-button-large {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.9rem;
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 3px solid white;
+  color: white;
+  padding: 1.2rem 2.5rem;
+  position: relative;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.arcade-button-large::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  background: linear-gradient(45deg, 
+    var(--neon-blue), 
+    var(--neon-pink), 
+    var(--neon-green), 
+    var(--neon-purple));
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.arcade-button-large:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Loading Animation */
+.loading {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 6px solid transparent;
+  border-top-color: var(--neon-blue);
+  border-bottom-color: var(--neon-pink);
+  animation: loading-spin 1.2s linear infinite;
+  box-shadow: 
+    0 0 10px rgba(0, 243, 255, 0.5),
+    0 0 20px rgba(255, 0, 255, 0.5);
+}
+
+@keyframes loading-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .arcade-button-glow-blue,
+  .arcade-button-glow-pink {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.7rem;
+  }
+  
+  .arcade-button-large {
+    padding: 1rem 1.5rem;
+    font-size: 0.7rem;
+  }
+  
+  .arcade-hero-text {
+    letter-spacing: 1px;
+  }
+}
+
+/* Ensure all buttons are clickable on mobile */
+.arcade-button-blue,
+.arcade-button-green,
+.arcade-button-pink,
+.arcade-button-glow-blue,
+.arcade-button-glow-pink,
+.arcade-button-large {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
 }

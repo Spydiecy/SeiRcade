@@ -21,6 +21,12 @@ const config: Config = {
           '50%': { transform: 'translateY(-10px)' },
         }
       },
+      colors: {
+        'neon-blue': '#00f3ff',
+        'neon-green': '#00ff66',
+        'neon-pink': '#ff00ff',
+        'neon-purple': '#9d00ff',
+      },
       backgroundColor: {
         'black': '#000000',
       }
