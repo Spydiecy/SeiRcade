@@ -622,7 +622,7 @@ export default function GamesPage() {
     const isWinner = currentUserAddress && room.winner && room.winner.toLowerCase() === currentUserAddress;
     
     if (isWinner) {
-      // Calculate prize amount with commission and platform fee
+      // Calculate prize amount with commission
       const prizePool = parseInt(room.prizePool);
       
       // Calculate commission (10% by default)
@@ -632,20 +632,14 @@ export default function GamesPage() {
       // Calculate prize pool after commission
       const prizePoolAfterCommission = prizePool - commissionAmount;
       
-      // Calculate platform fee (5% by default)
-      const platformFeeRate = 5; // This should ideally be fetched from the contract
-      const platformFeeAmount = Math.floor(prizePoolAfterCommission * platformFeeRate / 100);
-      
       // Calculate final prize amount
-      const finalPrizeAmount = prizePoolAfterCommission - platformFeeAmount;
+      const finalPrizeAmount = prizePoolAfterCommission;
       
       console.log('[checkGameResult] Prize calculation:', {
         prizePool,
         commissionRate,
         commissionAmount,
         prizePoolAfterCommission,
-        platformFeeRate,
-        platformFeeAmount,
         finalPrizeAmount
       });
       
@@ -723,14 +717,11 @@ export default function GamesPage() {
         return;
       }
       
-      // Calculate expected prize with commission and platform fee
       const prizePool = parseInt(room.prizePool);
       const commissionRate = 10; // This should ideally be fetched from the contract
       const commissionAmount = Math.floor(prizePool * commissionRate / 100);
       const prizePoolAfterCommission = prizePool - commissionAmount;
-      const platformFeeRate = 5; // This should ideally be fetched from the contract
-      const platformFeeAmount = Math.floor(prizePoolAfterCommission * platformFeeRate / 100);
-      const expectedPrize = prizePoolAfterCommission - platformFeeAmount;
+      const expectedPrize = prizePoolAfterCommission;
       
       console.log(`[handleClaimPrize] Expected prize: ${expectedPrize} points`);
       
@@ -1178,13 +1169,9 @@ export default function GamesPage() {
                           <span>Platform Commission (10%):</span>
                           <span>-{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.1) : 0} PTS</span>
                         </div>
-                        <div className="flex justify-between text-yellow-400">
-                          <span>Platform Fee (5%):</span>
-                          <span>-{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.9 * 0.05) : 0} PTS</span>
-                        </div>
                         <div className="flex justify-between text-neon-green font-bold">
                           <span>Winner's Prize:</span>
-                          <span>{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.9 * 0.95) : 0} PTS</span>
+                          <span>{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.9) : 0} PTS</span>
                         </div>
                       </div>
                     </div>
@@ -1964,8 +1951,7 @@ const RoomDetails = ({ room }: { room: any }) => {
   const totalPrizePool = entryFee * maxPlayers;
   const commissionAmount = Math.floor(totalPrizePool * 0.1); // 10% commission
   const prizePoolAfterCommission = totalPrizePool - commissionAmount;
-  const platformFeeAmount = Math.floor(prizePoolAfterCommission * 0.05); // 5% platform fee
-  const winnerPrize = prizePoolAfterCommission - platformFeeAmount;
+  const winnerPrize = prizePoolAfterCommission;
   
   return (
     <div className="mb-4 p-4 bg-black/30 border border-gray-700 rounded-md">
@@ -2011,10 +1997,6 @@ const RoomDetails = ({ room }: { room: any }) => {
           <div className="flex justify-between text-yellow-400">
             <span>Platform Commission (10%):</span>
             <span>-{commissionAmount.toLocaleString()} PTS</span>
-          </div>
-          <div className="flex justify-between text-yellow-400">
-            <span>Platform Fee (5%):</span>
-            <span>-{platformFeeAmount.toLocaleString()} PTS</span>
           </div>
           <div className="flex justify-between text-neon-green font-bold">
             <span>Winner's Prize:</span>
