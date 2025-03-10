@@ -229,24 +229,18 @@ export function useGameRoom() {
       if (room.status !== 1) { // Not in Active state
         // If room is in Filling state, we need to explain that room must be full before scores can be submitted
         if (room.status === 0) {
-          setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
+          if (isCreator) {
+            setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
+          } else {
+            setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
+          }
         } else {
           setError(`Cannot submit score - room is not in an active state (status: ${room.status})`);
         }
         return false;
       }
       
-      // Get all players to detect if others have submitted scores
-      const players = await getPlayersInRoom(roomId);
-      const playersWithScores = players.filter(player => 
-        player && player.hasSubmittedScore).length;
-      
-      console.log(`[submitScore] Players who have submitted scores: ${playersWithScores}/${room.currentPlayers}`);
-      
-      // Check if this is the last player submitting a score
-      const isLastPlayer = playersWithScores === room.currentPlayers - 1;
-      
-      console.log(`[submitScore] Submitting score ${score} for room ${roomId}. This ${isLastPlayer ? 'IS' : 'is NOT'} the last player to submit.`);
+      console.log(`[submitScore] Submitting score ${score} for room ${roomId}`);
       
       // Attempt to submit the score
       const tx = await gameRoom.submitScore(roomId, score);
@@ -254,13 +248,6 @@ export function useGameRoom() {
       // Wait for transaction to be mined
       const receipt = await tx.wait();
       console.log("[submitScore] Score submission transaction receipt:", receipt);
-      
-      // If this was the last player, the room will transition to Completed
-      if (isLastPlayer) {
-        console.log("[submitScore] This was the last player to submit a score. Room should now transition to Completed status.");
-      } else {
-        console.log("[submitScore] Waiting for other players to submit their scores...");
-      }
       
       return true;
     } catch (err: any) {

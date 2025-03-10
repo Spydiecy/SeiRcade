@@ -42,7 +42,6 @@ export default function GamesPage() {
     success: boolean;
     message: string;
     winnings?: string;
-    scoresTable?: { player: string; score: number | string; isUser: boolean; isCreator: boolean }[];
   } | null>(null);
   
   // Contract hooks
@@ -338,9 +337,6 @@ export default function GamesPage() {
         });
       }
       
-      // Function to display the current scoring progress of a room
-      displayRoomProgress(room, playersData);
-      
       setIsLoading(false);
     } catch (error: any) {
       console.error("Error loading room details:", error);
@@ -349,85 +345,6 @@ export default function GamesPage() {
         message: `Failed to load room details: ${error.message || 'Unknown error'}`
       });
       setIsLoading(false);
-    }
-  };
-  
-  // Function to display the current scoring progress of a room
-  const displayRoomProgress = (room: any, playersData: any[]) => {
-    // Skip if no room data
-    if (!room || !Array.isArray(playersData)) return;
-    
-    const playersWithScores = playersData.filter(player => 
-      player && player.hasSubmittedScore).length;
-    
-    console.log(`[displayRoomProgress] Room ${room.id}: ${playersWithScores}/${room.maxPlayers} players have submitted scores`);
-    
-    // If room is Active but not all players have submitted, show a progress notification
-    if (room.status === 1 && playersWithScores < room.maxPlayers) {
-      setNotification({
-        type: 'info',
-        message: `Waiting for players to submit scores: ${playersWithScores}/${room.maxPlayers} scores submitted.`
-      });
-    }
-    
-    // If in Filling status, show how many more players needed to become Active
-    if (room.status === 0 && room.currentPlayers < room.maxPlayers) {
-      setNotification({
-        type: 'info',
-        message: `Waiting for more players to join: ${room.currentPlayers}/${room.maxPlayers} players have joined.`
-      });
-    }
-    
-    // Display player scores if available
-    const scoresTable = [];
-    let userScoreFound = false;
-    
-    // Get current user address
-    const currentUserAddress = user?.wallet?.address?.toLowerCase();
-    
-    // Build score table for display
-    for (const player of playersData) {
-      if (player && player.playerAddress) {
-        const isUser = !!(currentUserAddress && player.playerAddress.toLowerCase() === currentUserAddress);
-        const isCreator = !!(room.creator && room.creator.toLowerCase() === player.playerAddress.toLowerCase());
-        let playerLabel = isUser ? 'You' : isCreator ? 'Creator' : `Player ${player.playerAddress.substring(0, 6)}...`;
-        
-        if (player.hasSubmittedScore) {
-          scoresTable.push({
-            player: playerLabel,
-            score: player.score || 0,
-            isUser,
-            isCreator
-          });
-          
-          if (isUser) {
-            userScoreFound = true;
-            // Update the game score in state if user has submitted a score
-            setGameScore(player.score || 0);
-          }
-        } else {
-          scoresTable.push({
-            player: playerLabel,
-            score: 'Not submitted',
-            isUser,
-            isCreator
-          });
-        }
-      }
-    }
-    
-    console.log('[displayRoomProgress] Scores table:', scoresTable);
-    
-    // If we found scores, display them in gameResult for user to see
-    if (scoresTable.length > 0) {
-      // Only show the score table if we're not the winner yet (otherwise checkGameResult will show the win screen)
-      if (room.status !== 2 || (room.status === 2 && room.winner?.toLowerCase() !== currentUserAddress)) {
-        setGameResult({
-          success: room.status === 2,
-          message: room.status === 2 ? 'Game completed! Here are the final scores:' : 'Current scores:',
-          scoresTable // Add this to the gameResult type
-        });
-      }
     }
   };
   
@@ -590,15 +507,6 @@ export default function GamesPage() {
           return;
         }
         
-        // Get all players to see how many have submitted scores already
-        const playersData = await getPlayersInRoom(gameSessionData.roomId);
-        const playersWithScores = playersData.filter(player => 
-          player && player.hasSubmittedScore).length;
-        const totalPlayers = gameSessionData.maxPlayers;
-        const isLastPlayer = playersWithScores === totalPlayers - 1;
-        
-        console.log(`[handleGameOver] Players with scores: ${playersWithScores}/${totalPlayers}. This ${isLastPlayer ? 'IS' : 'is NOT'} the last player to submit.`);
-        
         // Submit score attempt - the contract will validate if this is allowed
         const result = await submitScore(gameSessionData.roomId, score);
         
@@ -609,18 +517,11 @@ export default function GamesPage() {
           // Mark that player has played to prevent additional plays
           setHasPlayedInRoom(true);
           
-          // Show appropriate success notification based on completion status
-          if (isLastPlayer) {
-            setNotification({
-              type: 'success',
-              message: `Score of ${score} submitted successfully! You were the last player to submit a score. Room is now complete and the winner will be determined.`
-            });
-          } else {
-            setNotification({
-              type: 'success',
-              message: `Score of ${score} submitted successfully! Waiting for ${totalPlayers - playersWithScores - 1} more player(s) to submit their scores.`
-            });
-          }
+          // Show success notification
+          setNotification({
+            type: 'success',
+            message: `Score of ${score} submitted successfully!`
+          });
           
           // Fetch updated room data after submitting score
           const updatedRoom = await getRoomDetails(gameSessionData.roomId);
@@ -1164,58 +1065,40 @@ export default function GamesPage() {
           
           {/* Game result message */}
           {gameResult && (
-            <div className="bg-black/30 border border-gray-700 rounded-md p-4 mb-6">
-              <h3 className={`text-xl mb-2 ${gameResult.success ? 'text-green-400' : 'text-white'}`}>
-                {gameResult.message}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`mb-6 p-6 rounded-md text-center ${
+                gameResult.success 
+                  ? 'bg-green-900/30 border-2 border-neon-green' 
+                  : 'bg-red-900/30 border-2 border-red-500'
+              }`}
+            >
+              <h3 className={`text-2xl font-arcade mb-2 ${
+                gameResult.success ? 'text-neon-green' : 'text-red-400'
+              }`}>
+                {gameResult.success ? 'VICTORY!' : 'GAME OVER'}
               </h3>
-              {gameResult.winnings && (
-                <p className="text-xl text-neon-green mb-4">
-                  Prize: <span className="font-medium">{parseInt(gameResult.winnings).toLocaleString()} PTS</span>
-                </p>
-              )}
+              <p className="text-white mb-4">{gameResult.message}</p>
               
-              {/* Display the scores table if available */}
-              {gameResult.scoresTable && gameResult.scoresTable.length > 0 && (
-                <div className="mt-4 border-t border-gray-700 pt-4">
-                  <h4 className="text-neon-blue text-md mb-2">Player Scores:</h4>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="bg-black/50 border-b border-gray-700">
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-400">Player</th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-400">Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gameResult.scoresTable.map((entry, index) => (
-                          <tr 
-                            key={index} 
-                            className={`border-b border-gray-800 ${entry.isUser ? 'bg-neon-blue/10' : ''}`}
-                          >
-                            <td className={`px-4 py-3 text-sm text-left ${entry.isUser ? 'font-bold text-white' : 'text-gray-300'}`}>
-                              {entry.player}
-                              {entry.isCreator && <span className="ml-2 text-xs text-yellow-400">(Creator)</span>}
-                            </td>
-                            <td className={`px-4 py-3 text-sm text-right ${typeof entry.score === 'number' ? (entry.isUser ? 'text-neon-green font-bold' : 'text-white') : 'text-gray-500 italic'}`}>
-                              {typeof entry.score === 'number' ? entry.score.toLocaleString() : entry.score}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+              {gameResult.success && gameResult.winnings && (
+                <div className="mb-4">
+                  <p className="text-gray-300">Prize Pool:</p>
+                  <p className="text-3xl font-arcade text-neon-pink">
+                    {parseInt(gameResult.winnings).toLocaleString()} POINTS
+                  </p>
                 </div>
               )}
               
               {gameResult.success && gameSessionData?.roomId && (
                 <button
                   onClick={() => handleClaimPrize(gameSessionData.roomId!)}
-                  className="mt-4 bg-gradient-to-r from-neon-pink to-neon-blue text-white font-bold py-2 px-6 rounded-full hover:opacity-90 transition"
+                  className="arcade-button-glow-green"
                 >
-                  Claim Prize
+                  CLAIM PRIZE
                 </button>
               )}
-            </div>
+            </motion.div>
           )}
           
           <motion.div
@@ -1404,14 +1287,12 @@ export default function GamesPage() {
                 )}
                 
                 {/* Game component */}
-                <div className="bg-black/30 p-2 md:p-6 rounded-lg border border-neon-blue">
-                  <AIChallenge 
-                    onGameOver={handleGameOver}
-                    onStart={handleGameStart}
-                    disabled={hasPlayedInRoom || gameScore !== null}
-                    isCreator={gameSessionData?.isCreator}
-                  />
-                </div>
+                <AIChallenge 
+                  onGameOver={handleGameOver}
+                  onStart={handleGameStart}
+                  disabled={hasPlayedInRoom || gameScore !== null}
+                  isCreator={gameSessionData?.isCreator}
+                />
               </div>
             )}
             
