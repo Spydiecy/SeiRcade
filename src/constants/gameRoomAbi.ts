@@ -44,6 +44,25 @@ const GAME_ROOM_ABI = [
 				"internalType": "uint256",
 				"name": "roomId",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "CommissionCollected",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "roomId",
+				"type": "uint256"
 			}
 		],
 		"name": "GameStarted",
@@ -66,6 +85,19 @@ const GAME_ROOM_ABI = [
 			}
 		],
 		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newRate",
+				"type": "uint256"
+			}
+		],
+		"name": "PlatformCommissionRateUpdated",
 		"type": "event"
 	},
 	{
@@ -360,12 +392,38 @@ const GAME_ROOM_ABI = [
 	},
 	{
 		"inputs": [],
+		"name": "maxCommissionRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "owner",
 		"outputs": [
 			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "platformCommissionRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -554,6 +612,19 @@ const GAME_ROOM_ABI = [
 			}
 		],
 		"name": "updateDefaultExpirationTime",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_newRate",
+				"type": "uint256"
+			}
+		],
+		"name": "updatePlatformCommissionRate",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

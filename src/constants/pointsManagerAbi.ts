@@ -215,6 +215,19 @@ const POINTS_MANAGER_ABI = [
 	},
 	{
 		"inputs": [],
+		"name": "TCORE_DECIMALS",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "conversionRate",
 		"outputs": [
 			{
