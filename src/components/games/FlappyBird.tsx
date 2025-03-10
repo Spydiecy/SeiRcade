@@ -96,23 +96,38 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
               console.log(`${type} sound played successfully`);
             }
           } catch (error) {
-            console.warn(`Error playing ${type} sound:`, error);
-            // Try to recover by reinitializing the audio
-            sound.load();
+            // Silently fail if sound can't be played
+            console.warn(`Could not play ${type} sound:`, error);
           }
         };
-
-        // Execute the play attempt
+        
         playAttempt();
+      } else {
+        // Sound not available, but game should continue
+        console.log(`${type} sound not available, continuing without sound`);
       }
     } catch (error) {
-      console.warn(`Error in playSoundEffect for ${type}:`, error);
+      // Catch any unexpected errors
+      console.warn('Error playing sound effect:', error);
     }
   };
 
   // Preload assets
   useEffect(() => {
-    // Load audio files
+    let resourceLoadTimeout: NodeJS.Timeout;
+    
+    // Set a maximum time to wait for resources
+    const ensureGameReady = () => {
+      resourceLoadTimeout = setTimeout(() => {
+        if (!isReady) {
+          console.warn("Resource loading timed out, starting game anyway");
+          setIsReady(true);
+          setLoadingError(null); // Clear any loading errors
+        }
+      }, 5000); // 5 second timeout
+    };
+    
+    // Start resource loading
     const loadAudio = () => {
       try {
         // Create audio elements
@@ -128,11 +143,11 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
         });
 
         // Define audio paths
-        const basePath = window.location.origin;
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const audioFiles = {
-          start: `${basePath}/sounds/start.wav`,
-          score: `${basePath}/sounds/score.wav`,
-          crash: `${basePath}/sounds/crash.wav`
+          start: `${origin}/sounds/start.wav`,
+          score: `${origin}/sounds/score.wav`,
+          crash: `${origin}/sounds/crash.wav`
         };
 
         // Log paths for debugging
@@ -143,7 +158,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
         scoreAudio.src = audioFiles.score;
         crashAudio.src = audioFiles.crash;
 
-        // Store references
+        // Store references even before they're fully loaded
         audioRef.current = {
           start: startAudio,
           score: scoreAudio,
@@ -153,7 +168,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
         // Add load event listeners with better error handling
         const loadPromises = [startAudio, scoreAudio, crashAudio].map(
           (audio, index) => {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
               const name = ['start', 'score', 'crash'][index];
               
               audio.addEventListener('canplaythrough', () => {
@@ -168,12 +183,15 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
                   networkState: error.networkState,
                   readyState: error.readyState
                 });
-                reject(new Error(`Failed to load ${name} sound`));
-              }, { once: true });
+                // Resolve anyway to not block the game from starting
+                console.warn(`Game will continue without ${name} sound effect`);
+                resolve(null);
+              });
 
               // Start loading with timeout
               const timeoutId = setTimeout(() => {
-                reject(new Error(`Timeout loading ${name} sound`));
+                console.warn(`Timeout loading ${name} sound, continuing without it`);
+                resolve(null);
               }, 5000); // 5 second timeout
 
               audio.addEventListener('loadeddata', () => {
@@ -185,19 +203,23 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
           }
         );
 
-        // Wait for all sounds to load
+        // Wait for all audio to load or timeout
         Promise.all(loadPromises)
           .then(() => {
-            console.log('All audio files loaded successfully');
+            console.log('All audio loaded successfully');
+            setIsReady(true);
           })
-          .catch((error) => {
-            console.error('Error loading audio files:', error);
-            setLoadingError('Failed to load game sounds');
+          .catch(error => {
+            console.warn('Some audio files failed to load:', error);
+            // Continue with game initialization even if audio loading fails
+            setIsReady(true);
           });
 
       } catch (error) {
         console.error('Failed to initialize audio:', error);
-        setLoadingError('Failed to initialize game sounds');
+        // Continue anyway
+        console.warn('Game will continue without sound');
+        setIsReady(true);
       }
     };
 
@@ -215,6 +237,8 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
       };
       
       try {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        
         // Load bird image
         const birdImg = new Image();
         birdImg.onload = checkAllLoaded;
@@ -222,7 +246,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
           console.error("Failed to load bird image:", e);
           checkAllLoaded();
         };
-        birdImg.src = '/images/games/flappy-bird.png';
+        birdImg.src = `${origin}/images/games/flappy-bird.png`;
         imagesRef.current.bird = birdImg;
         
         // Load pipe top image
@@ -232,7 +256,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
           console.error("Failed to load pipe top image:", e);
           checkAllLoaded();
         };
-        pipeTopImg.src = '/images/games/pipe-top.png';
+        pipeTopImg.src = `${origin}/images/games/pipe-top.png`;
         imagesRef.current.pipeTop = pipeTopImg;
         
         // Load pipe bottom image
@@ -242,7 +266,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
           console.error("Failed to load pipe bottom image:", e);
           checkAllLoaded();
         };
-        pipeBottomImg.src = '/images/games/pipe-bottom.png';
+        pipeBottomImg.src = `${origin}/images/games/pipe-bottom.png`;
         imagesRef.current.pipeBottom = pipeBottomImg;
         
         // Load background image
@@ -252,7 +276,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
           console.error("Failed to load background image:", e);
           checkAllLoaded();
         };
-        backgroundImg.src = '/images/games/flappy-background.png';
+        backgroundImg.src = `${origin}/images/games/flappy-background.png`;
         imagesRef.current.background = backgroundImg;
         
       } catch (error) {
@@ -264,6 +288,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     // Load assets
     loadAudio();
     loadImages();
+    ensureGameReady();
     
     // Load high score from localStorage
     const storedHighScore = localStorage.getItem('flappyHighScore');
@@ -292,6 +317,10 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
           audio.src = '';
         }
       });
+      
+      if (resourceLoadTimeout) {
+        clearTimeout(resourceLoadTimeout);
+      }
     };
   }, []);
 
@@ -537,6 +566,44 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     ctx.fillText('Best: ' + highScore, 300, 40);
   };
 
+  // Draw functions with fallbacks for missing images
+  const drawBird = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    const bird = imagesRef.current.bird;
+    if (bird) {
+      ctx.drawImage(bird, x, y, birdRef.current.width, birdRef.current.height);
+    } else {
+      // Fallback drawing if image is not loaded
+      ctx.fillStyle = '#FFD700'; // Yellow color for bird
+      ctx.fillRect(x, y, birdRef.current.width, birdRef.current.height);
+    }
+  };
+
+  const drawPipe = (ctx: CanvasRenderingContext2D, x: number, topHeight: number, bottomY: number) => {
+    const pipeTop = imagesRef.current.pipeTop;
+    const pipeBottom = imagesRef.current.pipeBottom;
+    
+    if (pipeTop && pipeBottom) {
+      ctx.drawImage(pipeTop, x, topHeight - 320, PIPE_WIDTH, 320);
+      ctx.drawImage(pipeBottom, x, bottomY, PIPE_WIDTH, 320);
+    } else {
+      // Fallback drawing if images are not loaded
+      ctx.fillStyle = '#00AA00'; // Green color for pipes
+      ctx.fillRect(x, 0, PIPE_WIDTH, topHeight);
+      ctx.fillRect(x, bottomY, PIPE_WIDTH, ctx.canvas.height - bottomY);
+    }
+  };
+
+  const drawBackground = (ctx: CanvasRenderingContext2D) => {
+    const background = imagesRef.current.background;
+    if (background) {
+      ctx.drawImage(background, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    } else {
+      // Fallback drawing if image is not loaded
+      ctx.fillStyle = '#87CEEB'; // Sky blue color
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+  };
+
   // Game update loop
   const updateGame = (timestamp: number) => {
     if (!gameStateRef.current.gameStarted) {
@@ -559,13 +626,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw background
-    if (imagesRef.current.background?.complete) {
-      ctx.drawImage(imagesRef.current.background, 0, 0, canvas.width, canvas.height);
-    } else {
-      // Fallback background
-      ctx.fillStyle = '#008B8B'; // Teal background
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    drawBackground(ctx);
     
     // Update bird
     const bird = birdRef.current;
@@ -577,21 +638,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     ctx.translate(bird.x, bird.y);
     ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, bird.velocity * 0.04)));
     
-    if (imagesRef.current.bird?.complete) {
-      ctx.drawImage(
-        imagesRef.current.bird,
-        -bird.width / 2,
-        -bird.height / 2,
-        bird.width,
-        bird.height
-      );
-    } else {
-      // Fallback bird
-      ctx.fillStyle = '#FF6347'; // Tomato color
-      ctx.beginPath();
-      ctx.arc(0, 0, 20, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    drawBird(ctx, -bird.width / 2, -bird.height / 2);
     
     ctx.restore();
     
@@ -601,34 +648,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
       pipe.x -= PIPE_SPEED;
       
       // Draw top pipe
-      if (imagesRef.current.pipeTop?.complete) {
-        ctx.drawImage(
-          imagesRef.current.pipeTop,
-          pipe.x,
-          0,
-          PIPE_WIDTH,
-          pipe.topHeight
-        );
-      } else {
-        // Fallback pipe
-        ctx.fillStyle = '#75B855'; // Green pipe
-        ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
-      }
-      
-      // Draw bottom pipe
-      if (imagesRef.current.pipeBottom?.complete) {
-        ctx.drawImage(
-          imagesRef.current.pipeBottom,
-          pipe.x,
-          pipe.bottomY,
-          PIPE_WIDTH,
-          canvas.height - pipe.bottomY
-        );
-      } else {
-        // Fallback pipe
-        ctx.fillStyle = '#75B855'; // Green pipe
-        ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, canvas.height - pipe.bottomY);
-      }
+      drawPipe(ctx, pipe.x, pipe.topHeight, pipe.bottomY);
       
       // Check if bird passed pipe
       if (!pipe.counted && pipe.x + PIPE_WIDTH < bird.x) {

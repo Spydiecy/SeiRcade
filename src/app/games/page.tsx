@@ -10,6 +10,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useGameRoom, GameType, RoomType, RoomStatus } from '@/hooks/useGameRoom';
 import { usePoints } from '@/app/contexts/PointsContext';
 import { useWallet } from '@/app/contexts/WalletContext';
+import { span } from 'framer-motion/client';
 
 export default function GamesPage() {
   const searchParams = useSearchParams();
@@ -609,67 +610,90 @@ export default function GamesPage() {
     }
   };
   
-  // Improved checkGameResult function for better handling of winners and game completion
+  // Check game result and display appropriate message
   const checkGameResult = (room: any) => {
-    // Log the room details for debugging
-    console.log("Checking game result for room:", room);
+    console.log('[checkGameResult] Checking game result for room:', room);
     
-    const userAddress = user?.wallet?.address;
-    if (!userAddress) {
-      console.log("No user wallet address found");
+    if (!room || room.status !== 2) { // Not completed
       return;
     }
     
-    // Check room status
-    if (room.status !== 2) { // Not completed
-      console.log(`Room ${room.id} is not yet completed (status: ${room.status})`);
-      return;
-    }
+    const currentUserAddress = user?.wallet?.address?.toLowerCase();
+    const isWinner = currentUserAddress && room.winner && room.winner.toLowerCase() === currentUserAddress;
     
-    console.log(`Room winner: ${room.winner || 'No winner yet'}`);
-    
-    // Check if there's a winner set
-    if (room.winner && room.winner.toLowerCase() === userAddress.toLowerCase()) {
-      // Player won!
-      console.log("User is the winner!");
+    if (isWinner) {
+      // Calculate prize amount with commission and platform fee
+      const prizePool = parseInt(room.prizePool);
+      
+      // Calculate commission (10% by default)
+      const commissionRate = 10; // This should ideally be fetched from the contract
+      const commissionAmount = Math.floor(prizePool * commissionRate / 100);
+      
+      // Calculate prize pool after commission
+      const prizePoolAfterCommission = prizePool - commissionAmount;
+      
+      // Calculate platform fee (5% by default)
+      const platformFeeRate = 5; // This should ideally be fetched from the contract
+      const platformFeeAmount = Math.floor(prizePoolAfterCommission * platformFeeRate / 100);
+      
+      // Calculate final prize amount
+      const finalPrizeAmount = prizePoolAfterCommission - platformFeeAmount;
+      
+      console.log('[checkGameResult] Prize calculation:', {
+        prizePool,
+        commissionRate,
+        commissionAmount,
+        prizePoolAfterCommission,
+        platformFeeRate,
+        platformFeeAmount,
+        finalPrizeAmount
+      });
+      
       setGameResult({
         success: true,
-        message: 'Congratulations! You won the game!',
-        winnings: room.prizePool
+        message: `Congratulations! You won with the highest score!`,
+        winnings: finalPrizeAmount.toString()
       });
       
-      // Show a prominent notification
-      setNotification({
-        type: 'success',
-        message: `Congratulations! You won the game with a prize of ${parseInt(room.prizePool).toLocaleString()} points!`
-      });
-      
-    } else if (room.winner) {
-      // Game completed but player didn't win
-      console.log("User is not the winner");
-      setGameResult({
-        success: false,
-        message: 'Game over! Another player had a higher score.'
-      });
-      
-      // Show a notification
-      setNotification({
-        type: 'info',
-        message: `Game completed. The winner was ${room.winner.slice(0, 6)}...${room.winner.slice(-4)}`
-      });
-      
+      // Check if prize has been claimed
+      if (room.prizeClaimed) {
+        setNotification({
+          type: 'info',
+          message: 'You have already claimed your prize for this room.'
+        });
+      } else {
+        setNotification({
+          type: 'success',
+          message: `You won! Claim your prize of ${finalPrizeAmount} points.`
+        });
+      }
     } else {
-      // Game is marked as completed but no winner yet (strange state)
-      console.log("Room is completed but has no winner");
+      // User is not the winner
       setGameResult({
         success: false,
-        message: 'Game is marked as completed but has no determined winner yet.'
+        message: 'Game completed. You did not win this round.'
       });
+      
+      // If we know who the winner is, show their address
+      if (room.winner) {
+        const shortenedWinner = `${room.winner.substring(0, 6)}...${room.winner.substring(room.winner.length - 4)}`;
+        setNotification({
+          type: 'info',
+          message: `The winner is ${shortenedWinner}`
+        });
+      } else {
+        setNotification({
+          type: 'info',
+          message: 'This game has been completed.'
+        });
+      }
     }
   };
   
-  // Handle claim prize
+  // Handle claiming prize
   const handleClaimPrize = async (roomId: number) => {
+    console.log(`[handleClaimPrize] Claiming prize for room ${roomId}`);
+    
     if (!walletConnected) {
       setNotification({
         type: 'error',
@@ -679,29 +703,75 @@ export default function GamesPage() {
     }
     
     try {
+      setIsLoading(true);
+      
+      // Show loading notification
+      setNotification({
+        type: 'info',
+        message: 'Claiming your prize... Please wait'
+      });
+      
+      // Get room details to calculate expected prize
+      const room = await getRoomDetails(roomId);
+      
+      if (!room) {
+        setNotification({
+          type: 'error',
+          message: 'Room not found'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Calculate expected prize with commission and platform fee
+      const prizePool = parseInt(room.prizePool);
+      const commissionRate = 10; // This should ideally be fetched from the contract
+      const commissionAmount = Math.floor(prizePool * commissionRate / 100);
+      const prizePoolAfterCommission = prizePool - commissionAmount;
+      const platformFeeRate = 5; // This should ideally be fetched from the contract
+      const platformFeeAmount = Math.floor(prizePoolAfterCommission * platformFeeRate / 100);
+      const expectedPrize = prizePoolAfterCommission - platformFeeAmount;
+      
+      console.log(`[handleClaimPrize] Expected prize: ${expectedPrize} points`);
+      
+      // Claim the prize
       const result = await claimPrize(roomId);
       
       if (result) {
+        // Success!
         setNotification({
           type: 'success',
-          message: 'Prize claimed successfully!'
+          message: `Prize of ${expectedPrize} points claimed successfully!`
         });
         
         // Refresh balance
-        refreshBalance();
+        await refreshBalance();
         
-        // Reset game session
-        resetGameSession();
-        
-        // Reload rooms list
-        loadActiveRooms();
+        // Update room details to reflect claimed prize
+        const updatedRoom = await getRoomDetails(roomId);
+        if (updatedRoom) {
+          // Update game result
+          setGameResult({
+            success: true,
+            message: 'You won this game and claimed your prize!',
+            winnings: expectedPrize.toString()
+          });
+        }
+      } else {
+        // Failed to claim
+        setNotification({
+          type: 'error',
+          message: 'Failed to claim prize. Please try again.'
+        });
       }
-    } catch (error: any) {
-      console.error('Error claiming prize:', error);
+    } catch (error) {
+      console.error('[handleClaimPrize] Error claiming prize:', error);
       setNotification({
         type: 'error',
-        message: `Error: ${error.message || 'Failed to claim prize'}`
+        message: 'Error claiming prize. Please try again.'
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -1067,67 +1137,82 @@ export default function GamesPage() {
           {/* Game session info */}
           {gameSessionData && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-6 p-4 bg-black/60 border border-neon-blue rounded-md"
             >
-              <div className="flex flex-wrap justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-arcade text-neon-blue">ROOM #{gameSessionData.roomId}</h3>
-                  <p className="text-xs text-gray-400">
-                    Entry: <span className="text-neon-green">{parseInt(gameSessionData.entryFee).toLocaleString()} points</span> • 
-                    Players: <span className="text-neon-pink">{gameSessionData.currentPlayers}/{gameSessionData.maxPlayers}</span>
-                  </p>
-                </div>
-                
-                {gameScore !== null && (
-                  <div className="text-right">
-                    <p className="text-sm text-gray-400">YOUR SCORE</p>
-                    <p className="text-2xl font-arcade text-neon-green">{gameScore}</p>
-                  </div>
-                )}
-              </div>
+              <RoomDetails room={gameSessionData} />
             </motion.div>
           )}
           
           {/* Game result message */}
           {gameResult && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`mb-6 p-6 rounded-md text-center ${
-                gameResult.success 
-                  ? 'bg-green-900/30 border-2 border-neon-green' 
-                  : 'bg-red-900/30 border-2 border-red-500'
-              }`}
-            >
-              <h3 className={`text-2xl font-arcade mb-2 ${
-                gameResult.success ? 'text-neon-green' : 'text-red-400'
-              }`}>
-                {gameResult.success ? 'VICTORY!' : 'GAME OVER'}
-              </h3>
-              <p className="text-white mb-4">{gameResult.message}</p>
+            <div className="mt-8 p-6 bg-black/50 border border-neon-blue rounded-lg text-center">
+              <h2 className="text-2xl font-arcade mb-4">
+                {gameResult.success ? (
+                  <span className="text-neon-green">YOU WON!</span>
+                ) : (
+                  <span className="text-red-400">GAME OVER</span>
+                )}
+              </h2>
+              
+              <p className="text-lg mb-4">{gameResult.message}</p>
               
               {gameResult.success && gameResult.winnings && (
-                <div className="mb-4">
-                  <p className="text-gray-300">Prize Pool:</p>
-                  <p className="text-3xl font-arcade text-neon-pink">
-                    {parseInt(gameResult.winnings).toLocaleString()} POINTS
-                  </p>
+                <div className="mb-6">
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="text-xl mb-2">Your Prize:</p>
+                    <p className="text-3xl font-arcade text-neon-green mb-4">
+                      {parseInt(gameResult.winnings).toLocaleString()} <span className="text-sm">PTS</span>
+                    </p>
+                    
+                    {/* Prize breakdown */}
+                    <div className="w-full max-w-md bg-black/30 p-4 rounded-md text-left text-sm">
+                      <h3 className="text-neon-blue mb-2 text-center">Prize Breakdown</h3>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span>Total Prize Pool:</span>
+                          <span>{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers : 0} PTS</span>
+                        </div>
+                        <div className="flex justify-between text-yellow-400">
+                          <span>Platform Commission (10%):</span>
+                          <span>-{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.1) : 0} PTS</span>
+                        </div>
+                        <div className="flex justify-between text-yellow-400">
+                          <span>Platform Fee (5%):</span>
+                          <span>-{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.9 * 0.05) : 0} PTS</span>
+                        </div>
+                        <div className="flex justify-between text-neon-green font-bold">
+                          <span>Winner's Prize:</span>
+                          <span>{gameSessionData?.entryFee && gameSessionData?.maxPlayers ? Math.floor(parseInt(gameSessionData.entryFee) * gameSessionData.maxPlayers * 0.9 * 0.95) : 0} PTS</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {activeRoomId && (
+                    <button
+                      onClick={() => handleClaimPrize(activeRoomId)}
+                      disabled={isLoading}
+                      className="mt-4 bg-gradient-to-r from-neon-pink to-neon-blue text-white font-bold py-2 px-6 rounded-full hover:from-neon-blue hover:to-neon-pink transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Processing...' : 'Claim Prize'}
+                    </button>
+                  )}
                 </div>
               )}
               
-              {gameResult.success && gameSessionData?.roomId && (
+              <div className="mt-4 flex justify-center space-x-4">
                 <button
-                  onClick={() => handleClaimPrize(gameSessionData.roomId!)}
-                  className="arcade-button-glow-green"
+                  onClick={resetGameSession}
+                  className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full transition-colors duration-300"
                 >
-                  CLAIM PRIZE
+                  Back to Games
                 </button>
-              )}
-            </motion.div>
+              </div>
+            </div>
           )}
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1869,3 +1954,74 @@ function RoomCard({ room, index, onJoin }: {
     </motion.div>
   );
 }
+
+// Room details component with commission information
+const RoomDetails = ({ room }: { room: any }) => {
+  if (!room) return null;
+  
+  const entryFee = parseInt(room.entryFee);
+  const maxPlayers = room.maxPlayers;
+  const totalPrizePool = entryFee * maxPlayers;
+  const commissionAmount = Math.floor(totalPrizePool * 0.1); // 10% commission
+  const prizePoolAfterCommission = totalPrizePool - commissionAmount;
+  const platformFeeAmount = Math.floor(prizePoolAfterCommission * 0.05); // 5% platform fee
+  const winnerPrize = prizePoolAfterCommission - platformFeeAmount;
+  
+  return (
+    <div className="mb-4 p-4 bg-black/30 border border-gray-700 rounded-md">
+      <h3 className="text-lg font-arcade mb-2 text-neon-blue">Room Details</h3>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <p className="text-gray-400">Entry Fee:</p>
+          <p className="text-white">{entryFee.toLocaleString()} PTS</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Players:</p>
+          <p className="text-white">{room.currentPlayers}/{maxPlayers}</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Prize Pool:</p>
+          <p className="text-white">{totalPrizePool.toLocaleString()} PTS</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Status:</p>
+          <p className={`${
+            room.status === 0 ? 'text-yellow-400' : 
+            room.status === 1 ? 'text-neon-green' : 
+            room.status === 2 ? 'text-neon-blue' : 
+            'text-red-400'
+          }`}>
+            {room.status === 0 ? 'Filling' : 
+             room.status === 1 ? 'Active' : 
+             room.status === 2 ? 'Completed' : 
+             room.status === 3 ? 'Expired' : 
+             'Canceled'}
+          </p>
+        </div>
+      </div>
+      
+      {/* Commission information */}
+      <div className="mt-3 pt-3 border-t border-gray-700">
+        <p className="text-xs text-gray-400 mb-1">Prize Breakdown:</p>
+        <div className="text-xs grid grid-cols-1 gap-1">
+          <div className="flex justify-between">
+            <span>Total Prize Pool:</span>
+            <span>{totalPrizePool.toLocaleString()} PTS</span>
+          </div>
+          <div className="flex justify-between text-yellow-400">
+            <span>Platform Commission (10%):</span>
+            <span>-{commissionAmount.toLocaleString()} PTS</span>
+          </div>
+          <div className="flex justify-between text-yellow-400">
+            <span>Platform Fee (5%):</span>
+            <span>-{platformFeeAmount.toLocaleString()} PTS</span>
+          </div>
+          <div className="flex justify-between text-neon-green font-bold">
+            <span>Winner's Prize:</span>
+            <span>{winnerPrize.toLocaleString()} PTS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
