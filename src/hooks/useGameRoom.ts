@@ -136,7 +136,68 @@ export function useGameRoom() {
   };
   
   /**
-   * Submit score for a game
+   * Activate a room (transition from Filling to Active)
+   * @param roomId ID of the room to activate
+   */
+  const activateRoom = async (roomId: number) => {
+    if (!gameRoom) {
+      setError("Game room contract not initialized");
+      return false;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`[activateRoom] Attempting to activate room ${roomId}`);
+      
+      // Check room details first
+      const room = await getRoomDetails(roomId);
+      
+      if (!room) {
+        setError(`Room #${roomId} not found`);
+        return false;
+      }
+      
+      if (room.status !== 0) { // Not in Filling state
+        console.log(`[activateRoom] Room ${roomId} is already in status ${room.status}, no need to activate`);
+        return true; // Already active or in another state
+      }
+      
+      // If room exists and is in Filling state, we'll try to activate it by joining
+      console.log(`[activateRoom] Room is in Filling state, attempting to activate by joining`);
+      
+      // We might need to join the room to activate it
+      // Or submit a score directly as the creator
+      const tx = await gameRoom.activateRoom(roomId);
+      const receipt = await tx.wait();
+      console.log("[activateRoom] Room activation transaction receipt:", receipt);
+      
+      return true;
+    } catch (err: any) {
+      // If there's no activateRoom function, this will fail
+      // We'll try to determine if we need to handle it differently
+      console.error("[activateRoom] Error activating room:", err);
+      
+      // Check if the error is because the function doesn't exist
+      if (err.message && (
+        err.message.includes("method not found") || 
+        err.message.includes("is not a function") ||
+        err.message.includes("undefined method")
+      )) {
+        console.log("[activateRoom] activateRoom method not found, will continue with score submission");
+        return true; // Continue anyway, since this might be expected
+      }
+      
+      setError(err.message || "Failed to activate room");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  /**
+   * Submit a score for a game
    * @param roomId ID of the room
    * @param score Player's score
    */
@@ -150,16 +211,80 @@ export function useGameRoom() {
     setError(null);
     
     try {
+      // Get room details first
+      const room = await getRoomDetails(roomId);
+      
+      if (!room) {
+        setError(`Room #${roomId} not found`);
+        return false;
+      }
+      
+      // Check if user is the creator
+      const userAddress = user?.wallet?.address?.toLowerCase();
+      const isCreator = userAddress && room.creator.toLowerCase() === userAddress;
+      
+      console.log(`[submitScore] Room ID: ${roomId}, Status: ${room.status}, isCreator: ${isCreator}, maxPlayers: ${room.maxPlayers}, currentPlayers: ${room.currentPlayers}`);
+      
+      // According to the contract, scores can ONLY be submitted when status is Active (1)
+      if (room.status !== 1) { // Not in Active state
+        // If room is in Filling state, we need to explain that room must be full before scores can be submitted
+        if (room.status === 0) {
+          setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
+        } else {
+          setError(`Cannot submit score - room is not in an active state (status: ${room.status})`);
+        }
+        return false;
+      }
+      
+      // Get all players to detect if others have submitted scores
+      const players = await getPlayersInRoom(roomId);
+      const playersWithScores = players.filter(player => 
+        player && player.hasSubmittedScore).length;
+      
+      console.log(`[submitScore] Players who have submitted scores: ${playersWithScores}/${room.currentPlayers}`);
+      
+      // Check if this is the last player submitting a score
+      const isLastPlayer = playersWithScores === room.currentPlayers - 1;
+      
+      console.log(`[submitScore] Submitting score ${score} for room ${roomId}. This ${isLastPlayer ? 'IS' : 'is NOT'} the last player to submit.`);
+      
+      // Attempt to submit the score
       const tx = await gameRoom.submitScore(roomId, score);
       
       // Wait for transaction to be mined
       const receipt = await tx.wait();
-      console.log("Score submission transaction receipt:", receipt);
+      console.log("[submitScore] Score submission transaction receipt:", receipt);
+      
+      // If this was the last player, the room will transition to Completed
+      if (isLastPlayer) {
+        console.log("[submitScore] This was the last player to submit a score. Room should now transition to Completed status.");
+      } else {
+        console.log("[submitScore] Waiting for other players to submit their scores...");
+      }
       
       return true;
     } catch (err: any) {
-      console.error("Error submitting score:", err);
-      setError(err.message || "Failed to submit score");
+      console.error("[submitScore] Error submitting score:", err);
+      
+      // Extract the specific error message from the blockchain error
+      let errorMessage = "Failed to submit score";
+      
+      if (err.data && err.data.message) {
+        errorMessage = err.data.message;
+      } else if (err.error && err.error.data && err.error.data.message) {
+        errorMessage = err.error.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+        
+        // Check for specific error messages
+        if (err.message.includes("Game not active")) {
+          errorMessage = "The room must be in Active status before scores can be submitted. Active status is reached when the room is full.";
+        } else if (err.message.includes("Already played")) {
+          errorMessage = "You have already played in this room.";
+        }
+      }
+      
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);
@@ -359,6 +484,7 @@ export function useGameRoom() {
     error,
     createRoom,
     joinRoom,
+    activateRoom,
     submitScore,
     claimPrize,
     getUserRooms,

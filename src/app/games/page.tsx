@@ -42,6 +42,7 @@ export default function GamesPage() {
     success: boolean;
     message: string;
     winnings?: string;
+    scoresTable?: { player: string; score: number | string; isUser: boolean; isCreator: boolean }[];
   } | null>(null);
   
   // Contract hooks
@@ -193,14 +194,6 @@ export default function GamesPage() {
       console.log('[loadRoomDetails] Room details:', room);
       console.log('[loadRoomDetails] Room status:', room.status);
       
-      // Check if room status is already completed
-      if (room.status === 2) { // Completed
-        setNotification({
-          type: 'info',
-          message: `This game room has already been completed`
-        });
-      }
-      
       // Get current user address
       const currentUserAddress = user?.wallet?.address?.toLowerCase();
       
@@ -215,8 +208,8 @@ export default function GamesPage() {
       const playersData = await getPlayersInRoom(roomId);
       console.log("Players in room:", playersData);
       
-      // Safely find if current user has already submitted a score
-      const hasAlreadyPlayed = !!(
+      // Define playerHasSubmittedScore at the top level of the function
+      const playerHasSubmittedScore = !!(
         Array.isArray(playersData) && 
         currentUserAddress && 
         playersData.some(
@@ -227,30 +220,85 @@ export default function GamesPage() {
         )
       );
       
-      // Special handling for pending rooms (status 0)
-      if (room.status === 0) {
-        if (isCreator) {
-          // Creator viewing a pending room - they should play to set the score
-          // We'll force hasPlayedInRoom to false for creators of pending rooms
-          setHasPlayedInRoom(false);
-          
+      // Special handling for rooms based on their status
+      if (room.status === 0) { // Filling
+        // Check if the room needs more players
+        if (room.currentPlayers < room.maxPlayers) {
+          // Room isn't full yet
+          if (isCreator) {
+            console.log('[loadRoomDetails] User is the creator of a non-full room in Filling status');
+            setHasPlayedInRoom(false); // Allow creator to play, but they'll hit the contract error
+            
+            setNotification({
+              type: 'info',
+              message: `This room is not full yet (${room.currentPlayers}/${room.maxPlayers} players). According to the contract rules, rooms must be full before scores can be submitted. To test a room, consider creating a room with fewer max players or have others join this room.`
+            });
+          } else {
+            // For non-creators, check if they're already in the room
+            const userIsPlayer = Array.isArray(playersData) && playersData.some(player => 
+              player && 
+              player.playerAddress && 
+              player.playerAddress.toLowerCase() === currentUserAddress
+            ) || false;
+            
+            if (userIsPlayer) {
+              console.log('[loadRoomDetails] User is already a player in this room');
+              setHasPlayedInRoom(false); // Allow to play, but they'll hit the contract error
+              
+              setNotification({
+                type: 'info',
+                message: `You've joined this room, but it isn't full yet (${room.currentPlayers}/${room.maxPlayers} players). According to contract rules, all players can only submit scores once the room is full.`
+              });
+            } else {
+              console.log('[loadRoomDetails] User needs to join this room');
+              // User needs to join the room first
+              setNotification({
+                type: 'info',
+                message: `You need to join this room first. Click "Join Room" below.`
+              });
+            }
+          }
+        } else {
+          // Room is full but still in Filling status (might be a contract state delay)
+          console.log('[loadRoomDetails] Room is full but still in Filling status');
           setNotification({
             type: 'info',
-            message: `As the creator, you need to set a score for this room.`
-          });
-        } else if (playersData.length === 0) {
-          // No one has played yet, including the creator
-          setNotification({
-            type: 'info',
-            message: `The room creator hasn't set a score yet. Please check back later.`
+            message: `The room is full (${room.currentPlayers}/${room.maxPlayers} players) but not yet Active. This might be a temporary state delay. Try again in a moment.`
           });
         }
-      } else {
-        // For non-pending rooms, set hasPlayedInRoom normally
-        setHasPlayedInRoom(hasAlreadyPlayed);
+      } else if (room.status === 1) { // Active
+        // Check if player has already submitted a score
+        setHasPlayedInRoom(playerHasSubmittedScore);
+        
+        if (playerHasSubmittedScore) {
+          setNotification({
+            type: 'info',
+            message: `You've already played in this room. Each player can only play once per room.`
+          });
+        } else {
+          setNotification({
+            type: 'info',
+            message: `This room is active and ready for play! Submit your best score.`
+          });
+        }
+      } else if (room.status === 2) { // Completed
+        setHasPlayedInRoom(true); // Prevent playing in completed rooms
+        checkGameResult(room);
+      } else if (room.status === 3) { // Expired
+        setHasPlayedInRoom(true); // Prevent playing in expired rooms
+        setNotification({
+          type: 'info',
+          message: `This room has expired.`
+        });
+      } else if (room.status === 4) { // Canceled
+        setHasPlayedInRoom(true); // Prevent playing in canceled rooms
+        setNotification({
+          type: 'info',
+          message: `This room has been canceled.`
+        });
       }
       
-      if (hasAlreadyPlayed) {
+      if (playerHasSubmittedScore) {
         console.log('User has already played in this room');
         
         // Find user's score to display
@@ -268,8 +316,9 @@ export default function GamesPage() {
         }
       }
       
+      // Store room details for future reference
       setGameSessionData({
-        roomId,
+        roomId: room.id,
         entryFee: room.entryFee,
         maxPlayers: room.maxPlayers,
         gameType: room.gameType,
@@ -289,6 +338,9 @@ export default function GamesPage() {
         });
       }
       
+      // Function to display the current scoring progress of a room
+      displayRoomProgress(room, playersData);
+      
       setIsLoading(false);
     } catch (error: any) {
       console.error("Error loading room details:", error);
@@ -297,6 +349,85 @@ export default function GamesPage() {
         message: `Failed to load room details: ${error.message || 'Unknown error'}`
       });
       setIsLoading(false);
+    }
+  };
+  
+  // Function to display the current scoring progress of a room
+  const displayRoomProgress = (room: any, playersData: any[]) => {
+    // Skip if no room data
+    if (!room || !Array.isArray(playersData)) return;
+    
+    const playersWithScores = playersData.filter(player => 
+      player && player.hasSubmittedScore).length;
+    
+    console.log(`[displayRoomProgress] Room ${room.id}: ${playersWithScores}/${room.maxPlayers} players have submitted scores`);
+    
+    // If room is Active but not all players have submitted, show a progress notification
+    if (room.status === 1 && playersWithScores < room.maxPlayers) {
+      setNotification({
+        type: 'info',
+        message: `Waiting for players to submit scores: ${playersWithScores}/${room.maxPlayers} scores submitted.`
+      });
+    }
+    
+    // If in Filling status, show how many more players needed to become Active
+    if (room.status === 0 && room.currentPlayers < room.maxPlayers) {
+      setNotification({
+        type: 'info',
+        message: `Waiting for more players to join: ${room.currentPlayers}/${room.maxPlayers} players have joined.`
+      });
+    }
+    
+    // Display player scores if available
+    const scoresTable = [];
+    let userScoreFound = false;
+    
+    // Get current user address
+    const currentUserAddress = user?.wallet?.address?.toLowerCase();
+    
+    // Build score table for display
+    for (const player of playersData) {
+      if (player && player.playerAddress) {
+        const isUser = !!(currentUserAddress && player.playerAddress.toLowerCase() === currentUserAddress);
+        const isCreator = !!(room.creator && room.creator.toLowerCase() === player.playerAddress.toLowerCase());
+        let playerLabel = isUser ? 'You' : isCreator ? 'Creator' : `Player ${player.playerAddress.substring(0, 6)}...`;
+        
+        if (player.hasSubmittedScore) {
+          scoresTable.push({
+            player: playerLabel,
+            score: player.score || 0,
+            isUser,
+            isCreator
+          });
+          
+          if (isUser) {
+            userScoreFound = true;
+            // Update the game score in state if user has submitted a score
+            setGameScore(player.score || 0);
+          }
+        } else {
+          scoresTable.push({
+            player: playerLabel,
+            score: 'Not submitted',
+            isUser,
+            isCreator
+          });
+        }
+      }
+    }
+    
+    console.log('[displayRoomProgress] Scores table:', scoresTable);
+    
+    // If we found scores, display them in gameResult for user to see
+    if (scoresTable.length > 0) {
+      // Only show the score table if we're not the winner yet (otherwise checkGameResult will show the win screen)
+      if (room.status !== 2 || (room.status === 2 && room.winner?.toLowerCase() !== currentUserAddress)) {
+        setGameResult({
+          success: room.status === 2,
+          message: room.status === 2 ? 'Game completed! Here are the final scores:' : 'Current scores:',
+          scoresTable // Add this to the gameResult type
+        });
+      }
     }
   };
   
@@ -424,7 +555,7 @@ export default function GamesPage() {
   
   // Handle game over
   const handleGameOver = async (score: number) => {
-    console.log(`Game over with score: ${score}`);
+    console.log(`[handleGameOver] Game over with score: ${score}`);
     
     // Immediately set the score to prevent multiple submissions
     setGameScore(score);
@@ -432,10 +563,7 @@ export default function GamesPage() {
     // If we're in a room, submit the score to the blockchain
     if (gameSessionData?.roomId) {
       try {
-        console.log(`Submitting score ${score} for room ${gameSessionData.roomId}`);
-        
-        // Mark that player has played to prevent additional plays
-        setHasPlayedInRoom(true);
+        console.log(`[handleGameOver] Submitting score ${score} for room ${gameSessionData.roomId}, isCreator: ${gameSessionData.isCreator}, status: ${gameSessionData.status}`);
         
         // Show loading notification
         setNotification({
@@ -443,71 +571,112 @@ export default function GamesPage() {
           message: 'Submitting your score... Please wait'
         });
         
+        // First, check if the room is in Active status (required by contract)
+        if (gameSessionData.status !== 1) { // Not Active
+          console.error(`[handleGameOver] Room is not in Active status. Current status: ${gameSessionData.status}`);
+          
+          if (gameSessionData.status === 0) { // Filling
+            setNotification({
+              type: 'error',
+              message: `Cannot submit score - Room must be in Active status (currently in Filling status). A room becomes Active when it reaches its player limit.`
+            });
+          } else {
+            setNotification({
+              type: 'error',
+              message: `Cannot submit score - Room is not in Active status. Current status: ${gameSessionData.status}`
+            });
+          }
+          
+          return;
+        }
+        
+        // Get all players to see how many have submitted scores already
+        const playersData = await getPlayersInRoom(gameSessionData.roomId);
+        const playersWithScores = playersData.filter(player => 
+          player && player.hasSubmittedScore).length;
+        const totalPlayers = gameSessionData.maxPlayers;
+        const isLastPlayer = playersWithScores === totalPlayers - 1;
+        
+        console.log(`[handleGameOver] Players with scores: ${playersWithScores}/${totalPlayers}. This ${isLastPlayer ? 'IS' : 'is NOT'} the last player to submit.`);
+        
+        // Submit score attempt - the contract will validate if this is allowed
         const result = await submitScore(gameSessionData.roomId, score);
         
         if (result) {
-          setNotification({
-            type: 'success',
-            message: `Score of ${score} submitted successfully!${gameSessionData.isCreator ? ' Other players can now join and play!' : ''}`
-          });
+          // Success! Score was submitted
+          console.log("[handleGameOver] Score submission successful");
+          
+          // Mark that player has played to prevent additional plays
+          setHasPlayedInRoom(true);
+          
+          // Show appropriate success notification based on completion status
+          if (isLastPlayer) {
+            setNotification({
+              type: 'success',
+              message: `Score of ${score} submitted successfully! You were the last player to submit a score. Room is now complete and the winner will be determined.`
+            });
+          } else {
+            setNotification({
+              type: 'success',
+              message: `Score of ${score} submitted successfully! Waiting for ${totalPlayers - playersWithScores - 1} more player(s) to submit their scores.`
+            });
+          }
           
           // Fetch updated room data after submitting score
           const updatedRoom = await getRoomDetails(gameSessionData.roomId);
           
           if (updatedRoom) {
-            console.log("Updated room after score submission:", updatedRoom);
+            console.log("[handleGameOver] Updated room after score submission:", updatedRoom);
             
-            // If the user is the creator, make this more prominent
-            if (gameSessionData.isCreator) {
-              setNotification({
-                type: 'success',
-                message: 'Your score has been set as the challenge! Other players can now join and compete.'
-              });
-            }
+            // Update session data with new status
+            setGameSessionData({
+              ...gameSessionData,
+              status: updatedRoom.status
+            });
             
-            // If room is completed, check the winner
+            // If room is now completed, check the winner
             if (updatedRoom.status === 2) { // Completed
               checkGameResult(updatedRoom);
             } else {
               // If room is still active, set up a polling interval to check for completion
               const checkInterval = setInterval(async () => {
                 try {
-                  console.log("Checking if room is completed...");
+                  console.log("[handleGameOver] Checking if room is completed...");
                   const refreshedRoom = await getRoomDetails(gameSessionData.roomId!);
                   if (refreshedRoom && refreshedRoom.status === 2) {
-                    console.log("Room is now completed! Checking results...");
+                    console.log("[handleGameOver] Room is now completed! Checking results...");
                     checkGameResult(refreshedRoom);
                     clearInterval(checkInterval);
                   }
-                } catch (err) {
-                  console.error("Error checking room status:", err);
+                } catch (error) {
+                  console.error("[handleGameOver] Error checking room status:", error);
                 }
-              }, 10000); // Check every 10 seconds
+              }, 5000); // Check every 5 seconds
               
-              // Clear interval after 5 minutes (avoid infinite polling)
-              setTimeout(() => clearInterval(checkInterval), 300000);
+              // Clear interval after 2 minutes to avoid running indefinitely
+              setTimeout(() => clearInterval(checkInterval), 2 * 60 * 1000);
             }
           }
         } else {
-          setNotification({
-            type: 'error',
-            message: 'Failed to submit score. Please try again.'
-          });
+          // Score submission failed
+          console.error("[handleGameOver] Score submission failed");
           
-          // Allow retry if submission fails
+          // Don't mark as played so they can try again
           setHasPlayedInRoom(false);
-          setGameScore(null);
+          
+          // Error notifications are handled by the submitScore function
         }
-      } catch (error: any) {
-        console.error("Error submitting score:", error);
+      } catch (error) {
+        console.error("[handleGameOver] Error in overall score submission process:", error);
+        
+        // Reset flag to allow retry
+        setHasPlayedInRoom(false);
+        
+        // Set a generic error message
         setNotification({
           type: 'error',
-          message: `Error: ${error.message || 'Failed to submit score'}`
+          message: 'Error submitting score. Please try again later.'
         });
-        
-        // Allow retry if submission fails
-        setHasPlayedInRoom(false);
-        setGameScore(null);
       }
     }
   };
@@ -658,7 +827,7 @@ export default function GamesPage() {
         message: 'Creating your game room... Please wait'
       });
       
-      const roomId = await createRoom(
+      const newRoomId = await createRoom(
         roomSettings.entryFee,
         parseInt(roomSettings.maxPlayers),
         gameTypeValue,
@@ -667,40 +836,30 @@ export default function GamesPage() {
         parseInt(roomSettings.expirationTime)
       );
       
-      if (roomId) {
-        console.log(`Room created successfully with ID: ${roomId}`);
+      if (newRoomId) {
+        console.log(`Room created with ID: ${newRoomId}`);
         
-        // Clear any previous game state
-        setGameScore(null);
-        setHasPlayedInRoom(false);
-        setGameResult(null);
-        
-        // Close modal
-        setShowRoomModal(false);
-        
-        // Reload active rooms
-        await loadActiveRooms();
-        
-        // Refresh balance after room creation
-        await refreshBalance();
-        
-        // Show success with guidance to play
-        setNotification({
-          type: 'success',
-          message: `Room #${roomId} created successfully! You need to play first to set the score for this room.`
+        // Clear form
+        setRoomSettings({
+          entryFee: '10',
+          maxPlayers: '2',
+          gameType: '0',
+          roomType: '0',
+          inviteCode: '',
+          expirationTime: '3600'
         });
         
-        // Directly join the room after a short delay
-        setTimeout(() => {
-          console.log(`Auto-joining newly created room: ${roomId}`);
-          // Need to force reset game state here to ensure it's clean
-          resetGameSession();
-          
-          // Load room and activate it
-          loadRoomDetails(roomId);
-          setActiveRoomId(roomId);
-        }, 1500);
+        // Hide modal
+        setShowRoomModal(false);
         
+        // Show success message about room activation requirements
+        setNotification({
+          type: 'success',
+          message: `Room #${newRoomId} created successfully! Note: According to the contract, rooms will only become Active and allow score submission once they reach the maximum number of players (${parseInt(roomSettings.maxPlayers)}).`
+        });
+        
+        // Load room details and activate game
+        loadRoomDetails(newRoomId);
       } else {
         setNotification({
           type: 'error',
@@ -1005,40 +1164,58 @@ export default function GamesPage() {
           
           {/* Game result message */}
           {gameResult && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`mb-6 p-6 rounded-md text-center ${
-                gameResult.success 
-                  ? 'bg-green-900/30 border-2 border-neon-green' 
-                  : 'bg-red-900/30 border-2 border-red-500'
-              }`}
-            >
-              <h3 className={`text-2xl font-arcade mb-2 ${
-                gameResult.success ? 'text-neon-green' : 'text-red-400'
-              }`}>
-                {gameResult.success ? 'VICTORY!' : 'GAME OVER'}
+            <div className="bg-black/30 border border-gray-700 rounded-md p-4 mb-6">
+              <h3 className={`text-xl mb-2 ${gameResult.success ? 'text-green-400' : 'text-white'}`}>
+                {gameResult.message}
               </h3>
-              <p className="text-white mb-4">{gameResult.message}</p>
+              {gameResult.winnings && (
+                <p className="text-xl text-neon-green mb-4">
+                  Prize: <span className="font-medium">{parseInt(gameResult.winnings).toLocaleString()} PTS</span>
+                </p>
+              )}
               
-              {gameResult.success && gameResult.winnings && (
-                <div className="mb-4">
-                  <p className="text-gray-300">Prize Pool:</p>
-                  <p className="text-3xl font-arcade text-neon-pink">
-                    {parseInt(gameResult.winnings).toLocaleString()} POINTS
-                  </p>
+              {/* Display the scores table if available */}
+              {gameResult.scoresTable && gameResult.scoresTable.length > 0 && (
+                <div className="mt-4 border-t border-gray-700 pt-4">
+                  <h4 className="text-neon-blue text-md mb-2">Player Scores:</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="bg-black/50 border-b border-gray-700">
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-400">Player</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-400">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gameResult.scoresTable.map((entry, index) => (
+                          <tr 
+                            key={index} 
+                            className={`border-b border-gray-800 ${entry.isUser ? 'bg-neon-blue/10' : ''}`}
+                          >
+                            <td className={`px-4 py-3 text-sm text-left ${entry.isUser ? 'font-bold text-white' : 'text-gray-300'}`}>
+                              {entry.player}
+                              {entry.isCreator && <span className="ml-2 text-xs text-yellow-400">(Creator)</span>}
+                            </td>
+                            <td className={`px-4 py-3 text-sm text-right ${typeof entry.score === 'number' ? (entry.isUser ? 'text-neon-green font-bold' : 'text-white') : 'text-gray-500 italic'}`}>
+                              {typeof entry.score === 'number' ? entry.score.toLocaleString() : entry.score}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
               
               {gameResult.success && gameSessionData?.roomId && (
                 <button
                   onClick={() => handleClaimPrize(gameSessionData.roomId!)}
-                  className="arcade-button-glow-green"
+                  className="mt-4 bg-gradient-to-r from-neon-pink to-neon-blue text-white font-bold py-2 px-6 rounded-full hover:opacity-90 transition"
                 >
-                  CLAIM PRIZE
+                  Claim Prize
                 </button>
               )}
-            </motion.div>
+            </div>
           )}
           
           <motion.div
@@ -1227,12 +1404,14 @@ export default function GamesPage() {
                 )}
                 
                 {/* Game component */}
-                <AIChallenge 
-                  onGameOver={handleGameOver}
-                  onStart={handleGameStart}
-                  disabled={hasPlayedInRoom || gameScore !== null}
-                  isCreator={gameSessionData?.isCreator}
-                />
+                <div className="bg-black/30 p-2 md:p-6 rounded-lg border border-neon-blue">
+                  <AIChallenge 
+                    onGameOver={handleGameOver}
+                    onStart={handleGameStart}
+                    disabled={hasPlayedInRoom || gameScore !== null}
+                    isCreator={gameSessionData?.isCreator}
+                  />
+                </div>
               </div>
             )}
             
