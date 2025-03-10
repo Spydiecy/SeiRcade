@@ -207,18 +207,6 @@ export default function GamesPage() {
       const playersData = await getPlayersInRoom(roomId);
       console.log("Players in room:", playersData);
       
-      // Define playerHasSubmittedScore at the top level of the function
-      const playerHasSubmittedScore = !!(
-        Array.isArray(playersData) && 
-        currentUserAddress && 
-        playersData.some(
-          player => player && 
-            player.playerAddress && 
-            player.playerAddress.toLowerCase() === currentUserAddress && 
-            player.hasSubmittedScore
-        )
-      );
-      
       // Special handling for rooms based on their status
       if (room.status === 0) { // Filling
         // Check if the room needs more players
@@ -226,14 +214,15 @@ export default function GamesPage() {
           // Room isn't full yet
           if (isCreator) {
             console.log('[loadRoomDetails] User is the creator of a non-full room in Filling status');
-            setHasPlayedInRoom(false); // Allow creator to play, but they'll hit the contract error
+            setHasPlayedInRoom(false); // Allow creator to join, but they'll hit the contract error if they try to submit a score
             
             setNotification({
               type: 'info',
-              message: `This room is not full yet (${room.currentPlayers}/${room.maxPlayers} players). According to the contract rules, rooms must be full before scores can be submitted. To test a room, consider creating a room with fewer max players or have others join this room.`
+              message: `This room is not full yet (${room.currentPlayers}/${room.maxPlayers} players). According to the contract rules, rooms must be full before scores can be submitted. Invite more players to join or wait for the room to fill up.`
             });
           } else {
             // For non-creators, check if they're already in the room
+            // Check directly if the user's address is in the room's playerAddresses array
             const userIsPlayer = Array.isArray(playersData) && playersData.some(player => 
               player && 
               player.playerAddress && 
@@ -242,11 +231,11 @@ export default function GamesPage() {
             
             if (userIsPlayer) {
               console.log('[loadRoomDetails] User is already a player in this room');
-              setHasPlayedInRoom(false); // Allow to play, but they'll hit the contract error
+              setHasPlayedInRoom(false); // Allow to join, but they'll hit the contract error if they try to submit a score
               
               setNotification({
                 type: 'info',
-                message: `You've joined this room, but it isn't full yet (${room.currentPlayers}/${room.maxPlayers} players). According to contract rules, all players can only submit scores once the room is full.`
+                message: `You've joined this room, but it isn't full yet (${room.currentPlayers}/${room.maxPlayers} players). According to contract rules, all players can only submit scores once the room is full and Active.`
               });
             } else {
               console.log('[loadRoomDetails] User needs to join this room');
@@ -267,17 +256,61 @@ export default function GamesPage() {
         }
       } else if (room.status === 1) { // Active
         // Check if player has already submitted a score
-        setHasPlayedInRoom(playerHasSubmittedScore);
+        const playerHasSubmittedScore = !!(Array.isArray(playersData) && 
+          currentUserAddress && 
+          playersData.some(
+            player => player && 
+              player.playerAddress && 
+              player.playerAddress.toLowerCase() === currentUserAddress && 
+              player.hasSubmittedScore
+          ));
         
-        if (playerHasSubmittedScore) {
+        // Check if player is in the room by directly checking if their address is in the playerAddresses array
+        // This is the key fix - we need to check if the user is a player in the room
+        const userIsPlayer = isCreator || // Creator is always a player
+          (Array.isArray(playersData) && playersData.some(player => 
+            player && 
+            player.playerAddress && 
+            player.playerAddress.toLowerCase() === currentUserAddress
+          )) || false;
+        
+        console.log('[loadRoomDetails] User is player check:', { 
+          userAddress: currentUserAddress, 
+          isCreator, 
+          userIsPlayer, 
+          playerHasSubmittedScore,
+          playersData
+        });
+        
+        if (!userIsPlayer) {
+          // User is not a player in this room
+          setHasPlayedInRoom(true); // Prevent playing
           setNotification({
             type: 'info',
-            message: `You've already played in this room. Each player can only play once per room.`
+            message: `You are not a player in this room. The room is already active and not accepting new players.`
           });
-        } else {
+        } else if (playerHasSubmittedScore) {
+          // User has already submitted a score
+          setHasPlayedInRoom(true);
           setNotification({
             type: 'info',
-            message: `This room is active and ready for play! Submit your best score.`
+            message: `You've already submitted a score for this room. Waiting for other players to submit their scores.`
+          });
+          
+          // Check if all players have submitted scores
+          const allSubmitted = playersData.every(player => player && player.hasSubmittedScore);
+          if (allSubmitted) {
+            setNotification({
+              type: 'info',
+              message: `All players have submitted scores. The winner will be determined soon.`
+            });
+          }
+        } else {
+          // User is a player but hasn't submitted a score yet
+          setHasPlayedInRoom(false);
+          setNotification({
+            type: 'info',
+            message: `This room is active and ready for play! Submit your score now.`
           });
         }
       } else if (room.status === 2) { // Completed
@@ -295,24 +328,6 @@ export default function GamesPage() {
           type: 'info',
           message: `This room has been canceled.`
         });
-      }
-      
-      if (playerHasSubmittedScore) {
-        console.log('User has already played in this room');
-        
-        // Find user's score to display
-        if (Array.isArray(playersData) && currentUserAddress) {
-          const userPlayer = playersData.find(
-            player => player && 
-              player.playerAddress && 
-              player.playerAddress.toLowerCase() === currentUserAddress
-          );
-          
-          if (userPlayer && userPlayer.score !== undefined) {
-            setGameScore(userPlayer.score);
-            console.log(`User's score in this room: ${userPlayer.score}`);
-          }
-        }
       }
       
       // Store room details for future reference
@@ -520,7 +535,7 @@ export default function GamesPage() {
           // Show success notification
           setNotification({
             type: 'success',
-            message: `Score of ${score} submitted successfully!`
+            message: `Score of ${score} submitted successfully! Waiting for other players to submit their scores.`
           });
           
           // Fetch updated room data after submitting score
@@ -534,6 +549,18 @@ export default function GamesPage() {
               ...gameSessionData,
               status: updatedRoom.status
             });
+            
+            // Get players to check if all have submitted scores
+            const players = await getPlayersInRoom(gameSessionData.roomId);
+            const allSubmitted = Array.isArray(players) && 
+              players.every(player => player && player.hasSubmittedScore);
+            
+            if (allSubmitted) {
+              setNotification({
+                type: 'info',
+                message: `All players have submitted scores. The winner will be determined soon.`
+              });
+            }
             
             // If room is now completed, check the winner
             if (updatedRoom.status === 2) { // Completed
@@ -756,7 +783,7 @@ export default function GamesPage() {
         // Show success message about room activation requirements
         setNotification({
           type: 'success',
-          message: `Room #${newRoomId} created successfully! Note: According to the contract, rooms will only become Active and allow score submission once they reach the maximum number of players (${parseInt(roomSettings.maxPlayers)}).`
+          message: `Room #${newRoomId} created successfully! Note: According to the contract, rooms will only become Active and allow score submission once they reach the maximum number of players (${parseInt(roomSettings.maxPlayers)}). The winner is determined only after all players have submitted their scores.`
         });
         
         // Load room details and activate game

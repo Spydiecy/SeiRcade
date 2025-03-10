@@ -229,14 +229,39 @@ export function useGameRoom() {
       if (room.status !== 1) { // Not in Active state
         // If room is in Filling state, we need to explain that room must be full before scores can be submitted
         if (room.status === 0) {
-          if (isCreator) {
-            setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
-          } else {
-            setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
-          }
+          setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
         } else {
           setError(`Cannot submit score - room is not in an active state (status: ${room.status})`);
         }
+        return false;
+      }
+      
+      // Get all players to check if the user is a player in the room
+      const players = await getPlayersInRoom(roomId);
+      
+      // Check if user is a player in the room
+      const userIsPlayer = isCreator || // Creator is always a player
+        (Array.isArray(players) && players.some(player => 
+          player && 
+          player.playerAddress && 
+          player.playerAddress.toLowerCase() === userAddress
+        ));
+      
+      if (!userIsPlayer) {
+        setError("You are not a player in this room. Please join the room first.");
+        return false;
+      }
+      
+      // Check if user has already submitted a score
+      const hasAlreadySubmitted = Array.isArray(players) && players.some(player => 
+        player && 
+        player.playerAddress && 
+        player.playerAddress.toLowerCase() === userAddress && 
+        player.hasSubmittedScore
+      );
+      
+      if (hasAlreadySubmitted) {
+        setError("You have already submitted a score for this room");
         return false;
       }
       
@@ -248,6 +273,17 @@ export function useGameRoom() {
       // Wait for transaction to be mined
       const receipt = await tx.wait();
       console.log("[submitScore] Score submission transaction receipt:", receipt);
+      
+      // Check if all players have submitted scores after this submission
+      const updatedPlayers = await getPlayersInRoom(roomId);
+      const allSubmitted = Array.isArray(updatedPlayers) && 
+        updatedPlayers.every(player => player && player.hasSubmittedScore);
+      
+      if (allSubmitted) {
+        console.log("[submitScore] All players have submitted scores. Room will be completed soon.");
+      } else {
+        console.log("[submitScore] Waiting for other players to submit scores.");
+      }
       
       return true;
     } catch (err: any) {
@@ -266,8 +302,10 @@ export function useGameRoom() {
         // Check for specific error messages
         if (err.message.includes("Game not active")) {
           errorMessage = "The room must be in Active status before scores can be submitted. Active status is reached when the room is full.";
-        } else if (err.message.includes("Already played")) {
-          errorMessage = "You have already played in this room.";
+        } else if (err.message.includes("Score already submitted")) {
+          errorMessage = "You have already submitted a score for this room.";
+        } else if (err.message.includes("Not a player in this room")) {
+          errorMessage = "You are not a player in this room. Please join the room first.";
         }
       }
       
@@ -408,25 +446,58 @@ export function useGameRoom() {
     setError(null);
     
     try {
-      const players = await gameRoom.getPlayers(roomId);
+      console.log(`[getPlayersInRoom] Fetching players for room ${roomId}`);
+      // Get player addresses from the contract
+      const playerAddresses = await gameRoom.getPlayers(roomId);
+      console.log(`[getPlayersInRoom] Raw player addresses:`, playerAddresses);
       
-      // Safely format player data to ensure it has the expected structure
-      const formattedPlayers = Array.isArray(players) ? players.map((player: any) => {
-        // Only return valid player entries
-        if (!player || typeof player !== 'object') return null;
+      if (!Array.isArray(playerAddresses) || playerAddresses.length === 0) {
+        console.log(`[getPlayersInRoom] No players found in room ${roomId}`);
+        return [];
+      }
+      
+      // Get room details to check scores
+      const room = await getRoomDetails(roomId);
+      if (!room) {
+        console.log(`[getPlayersInRoom] Room ${roomId} not found`);
+        return [];
+      }
+      
+      // Format player data with scores if available
+      const formattedPlayers = await Promise.all(playerAddresses.map(async (address: string) => {
+        if (!address) return null;
         
-        // Format player data consistently
-        return {
-          playerAddress: player.playerAddress || null,
-          score: typeof player.score === 'number' ? player.score : 0,
-          hasSubmittedScore: !!player.hasSubmittedScore,
-          timestamp: player.timestamp ? player.timestamp.toNumber() : 0
-        };
-      }).filter(Boolean) : []; // Remove any null entries
+        try {
+          // For each player address, we need to check if they've submitted a score
+          // This requires calling the contract to get the player's score
+          let score = 0;
+          let hasSubmittedScore = false;
+          
+          // We can't directly get scores from the contract, but we can check if the room is completed
+          // and if the winner is this player
+          if (room.status === 2 && room.winner && room.winner.toLowerCase() === address.toLowerCase()) {
+            hasSubmittedScore = true;
+          }
+          
+          return {
+            playerAddress: address,
+            score: score,
+            hasSubmittedScore: hasSubmittedScore,
+            timestamp: 0
+          };
+        } catch (err) {
+          console.error(`Error processing player ${address}:`, err);
+          return null;
+        }
+      }));
       
-      return formattedPlayers;
+      // Filter out null entries
+      const validPlayers = formattedPlayers.filter(Boolean);
+      console.log(`[getPlayersInRoom] Formatted players:`, validPlayers);
+      
+      return validPlayers;
     } catch (err: any) {
-      console.error(`Error getting players in room ${roomId}:`, err);
+      console.error(`[getPlayersInRoom] Error getting players in room ${roomId}:`, err);
       setError(err.message || "Failed to get players in room");
       return [];
     } finally {

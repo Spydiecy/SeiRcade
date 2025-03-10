@@ -684,12 +684,6 @@ function RoomCard({ roomId }: { roomId: number }) {
           </p>
         )}
         
-        {room.userScore !== null && (
-          <p className="text-sm text-gray-400">
-            <span className="text-gray-500">Your Score:</span> <span className="text-neon-pink">{room.userScore}</span>
-          </p>
-        )}
-        
         {room.isCreator && (
           <p className="text-sm text-neon-blue">
             You created this room
