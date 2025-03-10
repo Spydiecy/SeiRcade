@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { FaLinkedin, FaTwitter, FaGithub } from 'react-icons/fa';
 
 export default function AboutPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,13 +17,15 @@ export default function AboutPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Sample team data
-  const teamMembers = [
-    { name: 'Alex Crypto', role: 'Founder & Lead Developer', avatar: '👨‍💻', description: 'Blockchain expert with a passion for gaming' },
-    { name: 'Samantha Block', role: 'Game Designer', avatar: '👩‍🎨', description: 'Creator of our unique gaming experiences' },
-    { name: 'Mike Token', role: 'Smart Contract Engineer', avatar: '👨‍🔧', description: 'Ensures our platform runs securely on-chain' },
-    { name: 'Lisa Dev', role: 'Frontend Developer', avatar: '👩‍💻', description: 'Crafts our immersive arcade interface' }
-  ];
+  // Founder info
+  const founderInfo = {
+    name: 'Tanishq Gupta',
+    role: 'Founder & Lead Developer',
+    avatar: '👨‍💻',
+    description: 'Passionate Blockchain Developer with 22+ hackathon wins and proven expertise in Web3 innovation. Selected among 95 students globally for UZH Blockchain Summer School 2024. Demonstrated ability to deliver both solo and team projects, with a consistent track record of winning international competitions. Skilled in building decentralized applications that solve real-world problems across multiple blockchain platforms.',
+    linkedin: 'tanishqgupta-tech',
+    twitter: 'tanishqistaken'
+  };
 
   // Sample FAQ data
   const faqItems = [
@@ -61,47 +64,45 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="pt-16 pb-16 arcade-bg min-h-screen">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen text-white bg-black overflow-hidden">
+      <div className="container mx-auto px-4 pt-12 pb-20">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
         >
-          <h1 className="text-3xl font-arcade neon-text glitch-text" data-text="ABOUT CORECADE">
-            ABOUT CORECADE
-          </h1>
-          <div className="h-1 w-64 bg-gradient-to-r from-neon-blue via-neon-pink to-transparent mt-2"></div>
+          <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ABOUT CORECADE</h1>
+          <p className="text-xl text-gray-300">Learn about our platform, vision, and the team behind it</p>
         </motion.div>
         
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-800 mb-8">
+        <div className="flex flex-wrap justify-center border-b border-gray-800 mb-12">
           <button
-            className={`py-3 px-6 font-arcade text-sm border-b-2 transition-all duration-300 ${
+            className={`py-3 px-8 font-arcade text-sm transition-all duration-300 ${
               activeTab === 'platform' 
-              ? 'text-neon-blue border-neon-blue' 
-              : 'text-gray-500 border-transparent'
+              ? 'text-neon-blue border-b-2 border-neon-blue' 
+              : 'text-gray-500 hover:text-gray-300'
             }`}
             onClick={() => setActiveTab('platform')}
           >
             THE PLATFORM
           </button>
           <button
-            className={`py-3 px-6 font-arcade text-sm border-b-2 transition-all duration-300 ${
+            className={`py-3 px-8 font-arcade text-sm transition-all duration-300 ${
               activeTab === 'team' 
-              ? 'text-neon-green border-neon-green' 
-              : 'text-gray-500 border-transparent'
+              ? 'text-neon-green border-b-2 border-neon-green' 
+              : 'text-gray-500 hover:text-gray-300'
             }`}
             onClick={() => setActiveTab('team')}
           >
             OUR TEAM
           </button>
           <button
-            className={`py-3 px-6 font-arcade text-sm border-b-2 transition-all duration-300 ${
+            className={`py-3 px-8 font-arcade text-sm transition-all duration-300 ${
               activeTab === 'faq' 
-              ? 'text-neon-pink border-neon-pink' 
-              : 'text-gray-500 border-transparent'
+              ? 'text-neon-pink border-b-2 border-neon-pink' 
+              : 'text-gray-500 hover:text-gray-300'
             }`}
             onClick={() => setActiveTab('faq')}
           >
@@ -111,15 +112,15 @@ export default function AboutPage() {
         
         {/* Platform Tab Content */}
         {activeTab === 'platform' && (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <div className="bg-black/50 border border-gray-800 rounded-md p-6">
-                <h2 className="text-2xl font-arcade neon-text-blue mb-4">Our Mission</h2>
-                <div className="cyberpunk-text text-gray-300 space-y-4 leading-relaxed">
+              <div className="bg-black/50 border border-neon-blue rounded-lg p-8">
+                <h2 className="text-2xl font-arcade text-neon-blue mb-6">Our Mission</h2>
+                <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
                     CoreCade was created with a simple yet powerful vision: to combine the nostalgic joy of arcade gaming with the innovative potential of blockchain technology. Our mission is to build a thriving play-to-earn ecosystem where skill is rewarded and fun is paramount.
                   </p>
@@ -135,35 +136,35 @@ export default function AboutPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="bg-black/50 border border-gray-800 rounded-md p-6">
-                <h2 className="text-2xl font-arcade neon-text-green mb-4">How It Works</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div className="bg-gray-900/50 p-4 rounded-md border border-gray-800">
-                    <div className="w-12 h-12 rounded-full bg-blue-900/30 border border-neon-blue flex items-center justify-center mb-3 mx-auto">
-                      <span className="text-2xl">💰</span>
+              <div className="bg-black/50 border border-neon-green rounded-lg p-8">
+                <h2 className="text-2xl font-arcade text-neon-green mb-6">How It Works</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-black/30 p-6 rounded-lg border border-gray-800 hover:border-neon-blue transition-all">
+                    <div className="w-16 h-16 rounded-full bg-blue-900/30 border border-neon-blue flex items-center justify-center mb-4 mx-auto">
+                      <span className="text-3xl">💰</span>
                     </div>
-                    <h3 className="font-arcade text-neon-blue text-center mb-2">Deposit</h3>
-                    <p className="text-sm text-gray-400 text-center">Convert Core tokens into platform points that you can use to enter games and competitions.</p>
+                    <h3 className="font-arcade text-neon-blue text-center mb-3">Deposit</h3>
+                    <p className="text-gray-400 text-center">Convert Core tokens into platform points that you can use to enter games and competitions.</p>
                   </div>
                   
-                  <div className="bg-gray-900/50 p-4 rounded-md border border-gray-800">
-                    <div className="w-12 h-12 rounded-full bg-green-900/30 border border-neon-green flex items-center justify-center mb-3 mx-auto">
-                      <span className="text-2xl">🎮</span>
+                  <div className="bg-black/30 p-6 rounded-lg border border-gray-800 hover:border-neon-green transition-all">
+                    <div className="w-16 h-16 rounded-full bg-green-900/30 border border-neon-green flex items-center justify-center mb-4 mx-auto">
+                      <span className="text-3xl">🎮</span>
                     </div>
-                    <h3 className="font-arcade text-neon-green text-center mb-2">Play</h3>
-                    <p className="text-sm text-gray-400 text-center">Join game rooms or create your own. Compete against other players in skill-based mini-games.</p>
+                    <h3 className="font-arcade text-neon-green text-center mb-3">Play</h3>
+                    <p className="text-gray-400 text-center">Join game rooms or create your own. Compete against other players in skill-based mini-games.</p>
                   </div>
                   
-                  <div className="bg-gray-900/50 p-4 rounded-md border border-gray-800">
-                    <div className="w-12 h-12 rounded-full bg-pink-900/30 border border-neon-pink flex items-center justify-center mb-3 mx-auto">
-                      <span className="text-2xl">🏆</span>
+                  <div className="bg-black/30 p-6 rounded-lg border border-gray-800 hover:border-neon-pink transition-all">
+                    <div className="w-16 h-16 rounded-full bg-pink-900/30 border border-neon-pink flex items-center justify-center mb-4 mx-auto">
+                      <span className="text-3xl">🏆</span>
                     </div>
-                    <h3 className="font-arcade text-neon-pink text-center mb-2">Earn</h3>
-                    <p className="text-sm text-gray-400 text-center">Win games to earn points which can be converted back to Core tokens and withdrawn.</p>
+                    <h3 className="font-arcade text-neon-pink text-center mb-3">Earn</h3>
+                    <p className="text-gray-400 text-center">Win games to earn points which can be converted back to Core tokens and withdrawn.</p>
                   </div>
                 </div>
                 
-                <div className="cyberpunk-text text-gray-300 space-y-4 leading-relaxed">
+                <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
                     Our platform uses smart contracts to ensure fair play and transparent prize distribution. All game outcomes and transactions are recorded on the Core blockchain, making the entire process trustless and verifiable.
                   </p>
@@ -176,9 +177,9 @@ export default function AboutPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <div className="bg-black/50 border border-gray-800 rounded-md p-6">
-                <h2 className="text-2xl font-arcade neon-text-pink mb-4">Our Games</h2>
-                <div className="cyberpunk-text text-gray-300 space-y-4 leading-relaxed">
+              <div className="bg-black/50 border border-neon-pink rounded-lg p-8">
+                <h2 className="text-2xl font-arcade text-neon-pink mb-6">Our Games</h2>
+                <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
                     CoreCade features a growing collection of skill-based mini-games, each with its own unique gameplay and challenge. Our games are designed to be easy to learn but difficult to master, rewarding practice and skill development.
                   </p>
@@ -187,8 +188,11 @@ export default function AboutPage() {
                   </p>
                 </div>
                 
-                <div className="mt-6 text-center">
-                  <Link href="/games" className="arcade-button-glow-blue">
+                <div className="mt-8 text-center">
+                  <Link 
+                    href="/games" 
+                    className="bg-gradient-to-r from-neon-pink to-neon-blue text-white font-bold py-3 px-8 rounded-full hover:from-neon-blue hover:to-neon-pink transition-all duration-300 shadow-glow-blue"
+                  >
                     EXPLORE OUR GAMES
                   </Link>
                 </div>
@@ -203,36 +207,63 @@ export default function AboutPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-black/50 border border-gray-800 rounded-md p-6"
+            className="bg-black/50 border border-neon-green rounded-lg p-8"
           >
-            <h2 className="text-2xl font-arcade neon-text-green mb-8 text-center">Meet The Team</h2>
+            <h2 className="text-2xl font-arcade text-neon-green mb-8 text-center">Meet The Team</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {teamMembers.map((member, index) => (
-                <div 
-                  key={index}
-                  className="bg-gray-900/50 border border-gray-800 rounded-md p-6 flex items-start"
-                >
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-4 flex-shrink-0">
-                    <span className="text-3xl">{member.avatar}</span>
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-black/30 border border-gray-800 rounded-lg p-8 hover:border-neon-blue transition-all duration-300">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-r from-neon-blue to-neon-pink flex items-center justify-center flex-shrink-0">
+                    <span className="text-5xl">{founderInfo.avatar}</span>
                   </div>
-                  <div>
-                    <h3 className="font-arcade text-neon-blue text-lg mb-1">{member.name}</h3>
-                    <p className="text-neon-pink text-sm mb-2">{member.role}</p>
-                    <p className="text-gray-400 text-sm">{member.description}</p>
+                  <div className="flex-1 text-center md:text-left">
+                    <h3 className="font-arcade text-neon-blue text-2xl mb-2">{founderInfo.name}</h3>
+                    <p className="text-neon-pink text-lg mb-4">{founderInfo.role}</p>
+                    <p className="text-gray-300 mb-6">{founderInfo.description}</p>
+                    
+                    <div className="flex gap-4 justify-center md:justify-start">
+                      <a 
+                        href={`https://linkedin.com/in/${founderInfo.linkedin}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-black/50 p-3 rounded-full border border-blue-600 text-blue-400 hover:bg-blue-900/30 transition-all"
+                      >
+                        <FaLinkedin size={24} />
+                      </a>
+                      <a 
+                        href={`https://twitter.com/${founderInfo.twitter}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-black/50 p-3 rounded-full border border-blue-400 text-blue-400 hover:bg-blue-900/30 transition-all"
+                      >
+                        <FaTwitter size={24} />
+                      </a>
+                      <a 
+                        href="https://github.com/tanishqguptatech" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-black/50 p-3 rounded-full border border-gray-600 text-white hover:bg-gray-900/30 transition-all"
+                      >
+                        <FaGithub size={24} />
+                      </a>
+                    </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
             
-            <div className="mt-8 p-6 bg-gray-900/30 border border-gray-800 rounded-md">
-              <h3 className="font-arcade text-white text-center mb-4">Join Our Team</h3>
-              <p className="text-gray-400 text-center mb-6">
-                We're always looking for talented individuals who are passionate about blockchain, gaming, and creating amazing experiences.
+            <div className="mt-12 p-8 bg-black/30 border border-gray-800 rounded-lg text-center">
+              <h3 className="font-arcade text-neon-blue text-xl mb-4">Join Our Team</h3>
+              <p className="text-gray-300 mb-6">
+                We're looking for passionate individuals who love blockchain technology, gaming, and want to build the future of play-to-earn platforms.
               </p>
               <div className="text-center">
-                <a href="mailto:careers@corecade.io" className="arcade-button-green">
-                  VIEW OPEN POSITIONS
+                <a 
+                  href="mailto:contact@corecade.io" 
+                  className="bg-gradient-to-r from-neon-green to-neon-blue text-white font-bold py-3 px-8 rounded-full hover:from-neon-blue hover:to-neon-green transition-all duration-300 shadow-glow-blue"
+                >
+                  GET IN TOUCH
                 </a>
               </div>
             </div>
@@ -245,11 +276,11 @@ export default function AboutPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-black/50 border border-gray-800 rounded-md p-6"
+            className="bg-black/50 border border-neon-pink rounded-lg p-8"
           >
-            <h2 className="text-2xl font-arcade neon-text-pink mb-8 text-center">Frequently Asked Questions</h2>
+            <h2 className="text-2xl font-arcade text-neon-pink mb-8 text-center">Frequently Asked Questions</h2>
             
-            <div className="space-y-6">
+            <div className="space-y-4 max-w-3xl mx-auto">
               {faqItems.map((item, index) => (
                 <FaqItem 
                   key={index}
@@ -260,12 +291,12 @@ export default function AboutPage() {
               ))}
             </div>
             
-            <div className="mt-8 p-6 bg-gray-900/30 border border-gray-800 rounded-md text-center">
-              <h3 className="font-arcade text-white mb-4">Still Have Questions?</h3>
-              <p className="text-gray-400 mb-6">
-                Our support team is always here to help. Reach out with any questions or concerns.
-              </p>
-              <a href="mailto:support@corecade.io" className="arcade-button-pink">
+            <div className="mt-12 text-center">
+              <p className="text-gray-400 mb-6">Still have questions? Feel free to reach out!</p>
+              <a 
+                href="mailto:support@corecade.io" 
+                className="bg-gradient-to-r from-neon-pink to-purple-600 text-white font-bold py-3 px-8 rounded-full hover:from-purple-600 hover:to-neon-pink transition-all duration-300 shadow-glow-pink"
+              >
                 CONTACT SUPPORT
               </a>
             </div>
@@ -276,22 +307,21 @@ export default function AboutPage() {
   );
 }
 
-// FAQ Item Component
 function FaqItem({ question, answer, index }: { question: string; answer: string; index: number }) {
   const [isOpen, setIsOpen] = useState(false);
   
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      className="border border-gray-800 rounded-md overflow-hidden"
+      className={`border border-gray-800 rounded-lg overflow-hidden ${isOpen ? 'bg-black/30' : 'bg-black/10 hover:bg-black/20'} transition-all`}
     >
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left p-4 bg-gray-900/50 flex justify-between items-center hover:bg-gray-900/80 transition-colors"
+        className="w-full p-4 text-left flex justify-between items-center"
       >
-        <span className="font-arcade text-white">{question}</span>
+        <span className="font-medium text-white">{question}</span>
         <span className={`text-neon-pink transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
           ▼
         </span>
@@ -302,10 +332,9 @@ function FaqItem({ question, answer, index }: { question: string; answer: string
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
-          className="p-4 bg-black/30 text-gray-300 cyberpunk-text leading-relaxed"
+          className="p-4 pt-0 text-gray-400 border-t border-gray-800"
         >
-          {answer}
+          <p>{answer}</p>
         </motion.div>
       )}
     </motion.div>

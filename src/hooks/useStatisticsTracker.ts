@@ -36,22 +36,44 @@ export function useStatisticsTracker() {
     setError(null);
     
     try {
+      console.log(`Fetching stats for address: ${userAddress}`);
       const stats = await statisticsTracker.getPlayerStats(userAddress);
+      console.log("Raw stats from contract:", stats);
       
+      // Create a properly formatted stats object with all required fields
       const formattedStats = {
-        gamesPlayed: stats.gamesPlayed.toNumber(),
-        gamesWon: stats.gamesWon.toNumber(),
-        totalEarnings: stats.totalEarnings.toString(),
-        winRate: stats.winRate.toNumber() / 100, // Convert basis points to percentage
-        highestScore: stats.highestScore.toNumber()
+        gamesPlayed: stats.gamesPlayed ? stats.gamesPlayed.toNumber() : 0,
+        gamesWon: stats.gamesWon ? stats.gamesWon.toNumber() : 0,
+        wins: stats.gamesWon ? stats.gamesWon.toNumber() : 0, // Alias for dashboard compatibility
+        totalEarnings: stats.totalEarnings ? stats.totalEarnings.toString() : '0',
+        pointsWon: stats.totalEarnings ? parseInt(stats.totalEarnings.toString()) : 0, // Alias for dashboard
+        pointsSpent: stats.totalSpent ? parseInt(stats.totalSpent.toString()) : 0,
+        winRate: stats.gamesPlayed && stats.gamesPlayed.toNumber() > 0 
+          ? (stats.gamesWon.toNumber() / stats.gamesPlayed.toNumber()) * 100 
+          : 0,
+        highestScore: stats.highestScore ? stats.highestScore.toNumber() : 0
       };
       
+      console.log("Formatted stats:", formattedStats);
       setPlayerStats(formattedStats);
       return formattedStats;
     } catch (err: any) {
       console.error("Error getting player stats:", err);
+      // Create default stats object with zeros to prevent UI errors
+      const defaultStats = {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        wins: 0,
+        totalEarnings: '0',
+        pointsWon: 0,
+        pointsSpent: 0,
+        winRate: 0,
+        highestScore: 0
+      };
+      
+      setPlayerStats(defaultStats);
       setError(err.message || "Failed to get player statistics");
-      return null;
+      return defaultStats;
     } finally {
       setLoading(false);
     }

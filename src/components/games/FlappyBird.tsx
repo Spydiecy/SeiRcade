@@ -8,14 +8,15 @@ interface FlappyBirdProps {
   onStart: () => void;
   disabled?: boolean; // Indicates if the player has already played in this room
   isCreator?: boolean; // Indicates if the player created this room
+  inRoom?: boolean; // Indicates if the game is being played in a room
 }
 
-export default function FlappyBird({ onGameOver, onStart, disabled = false, isCreator = false }: FlappyBirdProps) {
+export default function FlappyBird({ onGameOver, onStart, disabled = false, isCreator = false, inRoom = false }: FlappyBirdProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestIdRef = useRef<number | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(1);
   const [highScore, setHighScore] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     counted: boolean;
   }[]>([]);
 
-  const scoreRef = useRef(0);
+  const scoreRef = useRef(1);
   const lastTimestampRef = useRef(0);
   const pipeSpawnTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -73,8 +74,8 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     background: null
   });
 
-  // Modify the disabled check to allow room creators to play
-  const isPlayDisabled = disabled && !isCreator;
+  // Modify the disabled check to only apply when in a room
+  const isPlayDisabled = inRoom && disabled && !isCreator;
 
   // Function to play sounds safely
   const playSoundEffect = (type: 'start' | 'score' | 'crash', volume = 0.5) => {
@@ -397,45 +398,37 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
 
   // Start the game
   const startGame = () => {
-    // Don't allow starting if disabled (unless creator)
-    if (isPlayDisabled) return;
+    if (!isReady || gameStateRef.current.gameStarted) return;
     
-    if (!gameStateRef.current.gameStarted) {
-      // Notify parent component
-      onStart();
-      
-      // Initialize bird position
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      
-      birdRef.current = {
-        x: canvas.width / 4,
-        y: canvas.height / 2,
-        velocity: 0,
-        width: 40,
-        height: 30
-      };
-      
-      // Reset and start game
-      birdRef.current.velocity = 0;
-      pipesRef.current = [];
-      scoreRef.current = 0;
-      setScore(0);
-      setGameStarted(true);
-      setGameOver(false);
-      gameStateRef.current = { gameStarted: true, gameOver: false };
-      
-      // Play start sound
-      playSoundEffect('start');
-      
-      // Start game loop if not already running
-      if (!requestIdRef.current) {
-        lastTimestampRef.current = 0;
-        requestIdRef.current = requestAnimationFrame(updateGame);
-      }
-      
-      // Start pipe generation
-      generatePipe();
+    // Call the onStart callback
+    onStart();
+    
+    // Reset game state
+    setGameOver(false);
+    gameStateRef.current.gameOver = false;
+    setGameStarted(true);
+    gameStateRef.current.gameStarted = true;
+    
+    // Reset score to 1 (instead of 0)
+    scoreRef.current = 1;
+    setScore(1);
+    
+    // Reset pipes
+    pipesRef.current = [];
+    
+    // Reset bird position
+    birdRef.current.y = 200;
+    birdRef.current.velocity = 0;
+    
+    // Play start sound
+    playSoundEffect('start');
+    
+    // Generate first pipe after a delay
+    pipeSpawnTimerRef.current = setTimeout(generatePipe, PIPE_SPAWN_INTERVAL);
+    
+    // Start game loop
+    if (requestIdRef.current === null) {
+      requestIdRef.current = requestAnimationFrame(updateGame);
     }
   };
 
@@ -499,8 +492,8 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     setGameStarted(false);
     setGameOver(false);
     gameStateRef.current = { gameStarted: false, gameOver: false };
-    setScore(0);
-    scoreRef.current = 0;
+    setScore(1);
+    scoreRef.current = 1;
     
     // Redraw initial screen
     drawInitialScreen();
@@ -518,52 +511,43 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw background
-    if (imagesRef.current.background?.complete) {
-      ctx.drawImage(imagesRef.current.background, 0, 0, canvas.width, canvas.height);
-    } else {
-      // Fallback background
-      ctx.fillStyle = '#008B8B'; // Teal background
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw ground
-      ctx.fillStyle = '#3CB371'; // Green ground
-      ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-    }
+    drawBackground(ctx);
     
-    // Draw bird
-    const bird = birdRef.current;
-    if (imagesRef.current.bird?.complete) {
-      ctx.drawImage(
-        imagesRef.current.bird,
-        canvas.width / 4 - bird.width / 2,
-        canvas.height / 2 - bird.height / 2,
-        bird.width,
-        bird.height
-      );
-    } else {
-      // Fallback bird
-      ctx.fillStyle = '#FF6347'; // Tomato color
-      ctx.beginPath();
-      ctx.arc(canvas.width / 4, canvas.height / 2, 20, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    
-    // Draw "Tap to Start" text
-    ctx.font = '36px "Press Start 2P", cursive';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'center';
-    ctx.fillText('TAP TO START', canvas.width / 2, canvas.height / 2 + 150);
+    // Draw bird in center
+    const birdX = canvas.width / 4;
+    const birdY = canvas.height / 2;
+    drawBird(ctx, birdX, birdY);
     
     // Draw score
-    ctx.font = '20px "Press Start 2P", cursive';
-    ctx.fillStyle = '#00FF00'; // Green
+    ctx.font = '24px "Press Start 2P", cursive';
+    ctx.fillStyle = 'white';
     ctx.textAlign = 'left';
-    ctx.fillText('Score: ' + scoreRef.current, 20, 40);
-    
-    // Draw high score
-    ctx.fillStyle = '#FF00FF'; // Magenta
-    ctx.textAlign = 'left';
+    ctx.fillText('Score: 1', 20, 40);
     ctx.fillText('Best: ' + highScore, 300, 40);
+    
+    // Draw title
+    ctx.textAlign = 'center';
+    ctx.font = '36px "Press Start 2P", cursive';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('FLAPPY BIRD', canvas.width / 2, canvas.height / 3);
+    
+    // Draw instructions
+    ctx.font = '18px "Press Start 2P", cursive';
+    ctx.fillStyle = 'white';
+    
+    if (isPlayDisabled) {
+      // Show message if player has already played in this room
+      ctx.fillText('You have already played in this room', canvas.width / 2, canvas.height / 2 + 20);
+      ctx.fillText('Waiting for results...', canvas.width / 2, canvas.height / 2 + 60);
+    } else if (inRoom && isCreator) {
+      // Show special message for room creator
+      ctx.fillText('You are the room creator', canvas.width / 2, canvas.height / 2 + 20);
+      ctx.fillText('Click or press SPACE to set your score!', canvas.width / 2, canvas.height / 2 + 60);
+    } else {
+      // Normal play instructions
+      ctx.fillText('Click or press SPACE to start', canvas.width / 2, canvas.height / 2 + 20);
+      ctx.fillText('Avoid the pipes!', canvas.width / 2, canvas.height / 2 + 60);
+    }
   };
 
   // Draw functions with fallbacks for missing images
@@ -704,21 +688,28 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Game over text
-      ctx.font = '48px "Press Start 2P", cursive';
-      ctx.fillStyle = '#FF0000';
+      // Draw game over text
       ctx.textAlign = 'center';
+      ctx.font = '36px "Press Start 2P", cursive';
+      ctx.fillStyle = '#FF4444';
       ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
       
-      // Score
+      // Show score
       ctx.font = '24px "Press Start 2P", cursive';
       ctx.fillStyle = '#FFFFFF';
       ctx.fillText(`Score: ${scoreRef.current}`, canvas.width / 2, canvas.height / 2 + 20);
       ctx.fillText(`High Score: ${Math.max(highScore, scoreRef.current)}`, canvas.width / 2, canvas.height / 2 + 60);
       
-      // Tap to restart
-      ctx.font = '20px "Press Start 2P", cursive';
-      ctx.fillText('TAP TO RESTART', canvas.width / 2, canvas.height / 2 + 120);
+      // Show different messages based on playing in a room
+      if (inRoom) {
+        if (isCreator) {
+          ctx.fillText('Score submitted!', canvas.width / 2, canvas.height / 2 + 120);
+        } else {
+          ctx.fillText('Score submitted!', canvas.width / 2, canvas.height / 2 + 120);
+        }
+      } else {
+        ctx.fillText('TAP TO RESTART', canvas.width / 2, canvas.height / 2 + 120);
+      }
     }
     
     // Continue the game loop

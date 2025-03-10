@@ -103,17 +103,48 @@ export function useGameRoom() {
    * Join an existing game room
    * @param roomId ID of the room to join
    * @param inviteCode Invite code for private rooms
+   * @returns Object with success status and error message if applicable
    */
   const joinRoom = async (roomId: number, inviteCode: string = "") => {
     if (!gameRoom) {
       setError("Game room contract not initialized");
-      return false;
+      return { success: false, error: "Game room contract not initialized" };
     }
     
     setLoading(true);
     setError(null);
     
     try {
+      // First get room details to check entry fee
+      const roomDetails = await getRoomDetails(roomId);
+      if (!roomDetails) {
+        const errorMsg = "Room not found or has been deleted";
+        setError(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      
+      // Check if user has enough points
+      try {
+        const pointsManager = await gameRoom.pointsManager();
+        const pointsContract = new ethers.Contract(
+          pointsManager,
+          ["function balanceOf(address) view returns (uint256)"],
+          gameRoom.provider
+        );
+        
+        const userBalance = await pointsContract.balanceOf(user?.wallet?.address);
+        const entryFee = ethers.BigNumber.from(roomDetails.entryFee);
+        
+        if (userBalance.lt(entryFee)) {
+          const errorMsg = `Insufficient balance. You need ${entryFee.toString()} points to join this room, but you only have ${userBalance.toString()} points.`;
+          setError(errorMsg);
+          return { success: false, error: errorMsg, insufficientBalance: true };
+        }
+      } catch (balanceErr) {
+        console.warn("Could not check balance before joining:", balanceErr);
+        // Continue anyway, the contract will revert if balance is insufficient
+      }
+      
       const tx = await gameRoom.joinRoom(roomId, inviteCode);
       
       // Wait for transaction to be mined
@@ -125,11 +156,43 @@ export function useGameRoom() {
         await getUserRooms(user.wallet.address);
       }
       
-      return true;
+      return { success: true };
     } catch (err: any) {
       console.error("Error joining room:", err);
-      setError(err.message || "Failed to join room");
-      return false;
+      
+      // Extract meaningful error message
+      let errorMsg = "Failed to join room";
+      
+      // Check for common error patterns
+      if (err.message) {
+        if (err.message.includes("insufficient funds") || 
+            err.message.includes("exceeds balance") ||
+            err.message.includes("ERC20: transfer amount exceeds balance")) {
+          errorMsg = "Insufficient balance. You don't have enough points to join this room.";
+          setError(errorMsg);
+          return { success: false, error: errorMsg, insufficientBalance: true };
+        } else if (err.message.includes("room is full")) {
+          errorMsg = "This room is already full.";
+        } else if (err.message.includes("invalid invite code")) {
+          errorMsg = "Invalid invite code for this private room.";
+        } else if (err.message.includes("already joined")) {
+          errorMsg = "You have already joined this room.";
+        } else if (err.message.includes("room not found")) {
+          errorMsg = "Room not found or has been deleted.";
+        } else if (err.message.includes("room expired")) {
+          errorMsg = "This room has expired.";
+        } else if (err.message.includes("room canceled")) {
+          errorMsg = "This room has been canceled.";
+        } else if (err.message.includes("room completed")) {
+          errorMsg = "This room has already been completed.";
+        } else {
+          // Use the original error message if it's not one of the common cases
+          errorMsg = err.message;
+        }
+      }
+      
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }
@@ -200,117 +263,103 @@ export function useGameRoom() {
    * Submit a score for a game
    * @param roomId ID of the room
    * @param score Player's score
+   * @returns Object with success status and error message if applicable
    */
   const submitScore = async (roomId: number, score: number) => {
     if (!gameRoom) {
       setError("Game room contract not initialized");
-      return false;
+      return { success: false, error: "Game room contract not initialized" };
     }
     
     setLoading(true);
     setError(null);
     
     try {
-      // Get room details first
+      // First check if room is in Active status
       const room = await getRoomDetails(roomId);
-      
       if (!room) {
-        setError(`Room #${roomId} not found`);
-        return false;
+        const errorMsg = "Room not found or has been deleted";
+        setError(errorMsg);
+        return { success: false, error: errorMsg };
       }
       
-      // Check if user is the creator
-      const userAddress = user?.wallet?.address?.toLowerCase();
-      const isCreator = userAddress && room.creator.toLowerCase() === userAddress;
-      
-      console.log(`[submitScore] Room ID: ${roomId}, Status: ${room.status}, isCreator: ${isCreator}, maxPlayers: ${room.maxPlayers}, currentPlayers: ${room.currentPlayers}`);
-      
-      // According to the contract, scores can ONLY be submitted when status is Active (1)
-      if (room.status !== 1) { // Not in Active state
-        // If room is in Filling state, we need to explain that room must be full before scores can be submitted
-        if (room.status === 0) {
-          setError(`This room is not active yet. The room must be full (${room.currentPlayers}/${room.maxPlayers} players) before scores can be submitted.`);
-        } else {
-          setError(`Cannot submit score - room is not in an active state (status: ${room.status})`);
+      if (room.status !== 1) { // Not Active
+        let statusText = "unknown";
+        switch (room.status) {
+          case 0: statusText = "Filling"; break;
+          case 2: statusText = "Completed"; break;
+          case 3: statusText = "Expired"; break;
+          case 4: statusText = "Canceled"; break;
         }
-        return false;
+        
+        const errorMsg = `Room must be in Active status to submit scores. Current status: ${statusText}`;
+        setError(errorMsg);
+        return { success: false, error: errorMsg, statusError: true };
       }
       
-      // Get all players to check if the user is a player in the room
+      // Check if user is a player in this room
       const players = await getPlayersInRoom(roomId);
-      
-      // Check if user is a player in the room
-      const userIsPlayer = isCreator || // Creator is always a player
-        (Array.isArray(players) && players.some(player => 
+      const currentUserAddress = user?.wallet?.address?.toLowerCase();
+      const isPlayer = Array.isArray(players) && currentUserAddress && 
+        players.some(player => 
           player && 
           player.playerAddress && 
-          player.playerAddress.toLowerCase() === userAddress
-        ));
+          player.playerAddress.toLowerCase() === currentUserAddress
+        );
       
-      if (!userIsPlayer) {
-        setError("You are not a player in this room. Please join the room first.");
-        return false;
+      if (!isPlayer) {
+        const errorMsg = "You are not a player in this room";
+        setError(errorMsg);
+        return { success: false, error: errorMsg, notPlayerError: true };
       }
       
       // Check if user has already submitted a score
-      const hasAlreadySubmitted = Array.isArray(players) && players.some(player => 
-        player && 
-        player.playerAddress && 
-        player.playerAddress.toLowerCase() === userAddress && 
-        player.hasSubmittedScore
-      );
+      const hasSubmitted = Array.isArray(players) && currentUserAddress && 
+        players.some(player => 
+          player && 
+          player.playerAddress && 
+          player.playerAddress.toLowerCase() === currentUserAddress && 
+          player.hasSubmittedScore
+        );
       
-      if (hasAlreadySubmitted) {
-        setError("You have already submitted a score for this room");
-        return false;
+      if (hasSubmitted) {
+        const errorMsg = "You have already submitted a score for this room";
+        setError(errorMsg);
+        return { success: false, error: errorMsg, alreadySubmittedError: true };
       }
       
-      console.log(`[submitScore] Submitting score ${score} for room ${roomId}`);
-      
-      // Attempt to submit the score
+      console.log(`Submitting score ${score} for room ${roomId}`);
       const tx = await gameRoom.submitScore(roomId, score);
       
       // Wait for transaction to be mined
       const receipt = await tx.wait();
-      console.log("[submitScore] Score submission transaction receipt:", receipt);
+      console.log("Score submission transaction receipt:", receipt);
       
-      // Check if all players have submitted scores after this submission
-      const updatedPlayers = await getPlayersInRoom(roomId);
-      const allSubmitted = Array.isArray(updatedPlayers) && 
-        updatedPlayers.every(player => player && player.hasSubmittedScore);
-      
-      if (allSubmitted) {
-        console.log("[submitScore] All players have submitted scores. Room will be completed soon.");
-      } else {
-        console.log("[submitScore] Waiting for other players to submit scores.");
-      }
-      
-      return true;
+      return { success: true };
     } catch (err: any) {
-      console.error("[submitScore] Error submitting score:", err);
+      console.error("Error submitting score:", err);
       
-      // Extract the specific error message from the blockchain error
-      let errorMessage = "Failed to submit score";
+      // Extract meaningful error message
+      let errorMsg = "Failed to submit score";
       
-      if (err.data && err.data.message) {
-        errorMessage = err.data.message;
-      } else if (err.error && err.error.data && err.error.data.message) {
-        errorMessage = err.error.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-        
-        // Check for specific error messages
-        if (err.message.includes("Game not active")) {
-          errorMessage = "The room must be in Active status before scores can be submitted. Active status is reached when the room is full.";
-        } else if (err.message.includes("Score already submitted")) {
-          errorMessage = "You have already submitted a score for this room.";
-        } else if (err.message.includes("Not a player in this room")) {
-          errorMessage = "You are not a player in this room. Please join the room first.";
+      // Check for common error patterns
+      if (err.message) {
+        if (err.message.includes("room not active")) {
+          errorMsg = "Room must be in Active status to submit scores";
+        } else if (err.message.includes("not a player")) {
+          errorMsg = "You are not a player in this room";
+        } else if (err.message.includes("already submitted")) {
+          errorMsg = "You have already submitted a score for this room";
+        } else if (err.message.includes("room not found")) {
+          errorMsg = "Room not found or has been deleted";
+        } else {
+          // Use the original error message if it's not one of the common cases
+          errorMsg = err.message;
         }
       }
       
-      setError(errorMessage);
-      return false;
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }

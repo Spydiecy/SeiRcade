@@ -549,7 +549,7 @@ function GamesPageClient() {
         // Submit score attempt - the contract will validate if this is allowed
         const result = await submitScore(gameSessionData.roomId, score);
         
-        if (result) {
+        if (result.success) {
           // Success! Score was submitted
           console.log("[handleGameOver] Score submission successful");
           
@@ -611,12 +611,38 @@ function GamesPageClient() {
           }
         } else {
           // Score submission failed
-          console.error("[handleGameOver] Score submission failed");
+          console.error("[handleGameOver] Score submission failed:", result.error);
           
-          // Don't mark as played so they can try again
-          setHasPlayedInRoom(false);
+          // Handle specific error cases
+          if (result.statusError) {
+            setNotification({
+              type: 'error',
+              message: `Cannot submit score - ${result.error}`
+            });
+          } else if (result.notPlayerError) {
+            setNotification({
+              type: 'error',
+              message: `You are not registered as a player in this room. Please join the room first.`
+            });
+          } else if (result.alreadySubmittedError) {
+            setNotification({
+              type: 'error',
+              message: `You have already submitted a score for this room.`
+            });
+            // Mark as played since they've already submitted
+            setHasPlayedInRoom(true);
+          } else {
+            // Generic error
+            setNotification({
+              type: 'error',
+              message: result.error || 'Error submitting score. Please try again.'
+            });
+          }
           
-          // Error notifications are handled by the submitScore function
+          // Don't mark as played if there was an error (except for already submitted)
+          if (!result.alreadySubmittedError) {
+            setHasPlayedInRoom(false);
+          }
         }
       } catch (error) {
         console.error("[handleGameOver] Error in overall score submission process:", error);
@@ -951,9 +977,16 @@ function GamesPageClient() {
       
       // Otherwise, join the room
       console.log(`Joining room ${roomId} with invite code: ${inviteCode}`);
-      const success = await joinRoom(roomId, inviteCode);
       
-      if (success) {
+      // Show loading notification
+      setNotification({
+        type: 'info',
+        message: 'Joining room... Please wait'
+      });
+      
+      const result = await joinRoom(roomId, inviteCode);
+      
+      if (result.success) {
         setNotification({
           type: 'success',
           message: 'Joined room successfully!'
@@ -966,10 +999,29 @@ function GamesPageClient() {
         // Refresh balance
         refreshBalance();
       } else {
-        setNotification({
-          type: 'error',
-          message: 'Failed to join room. Please try again.'
-        });
+        // Handle specific error cases
+        if (result.insufficientBalance) {
+          setNotification({
+            type: 'error',
+            message: 'Insufficient balance. You need more points to join this room.'
+          });
+          
+          // Show option to go to dashboard to convert tokens
+          setTimeout(() => {
+            setNotification({
+              type: 'info',
+              message: 'Would you like to go to the dashboard to convert CORE tokens to points?'
+            });
+            
+            // Add a button to the notification to go to dashboard
+            // This is handled in the notification component
+          }, 3000);
+        } else {
+          setNotification({
+            type: 'error',
+            message: result.error || 'Failed to join room. Please try again.'
+          });
+        }
       }
     } catch (error: any) {
       console.error("Error joining room:", error);
@@ -2562,7 +2614,7 @@ function GamesContent() {
         // Submit score attempt - the contract will validate if this is allowed
         const result = await submitScore(gameSessionData.roomId, score);
         
-        if (result) {
+        if (result.success) {
           // Success! Score was submitted
           console.log("[handleGameOver] Score submission successful");
           
@@ -2624,12 +2676,38 @@ function GamesContent() {
           }
         } else {
           // Score submission failed
-          console.error("[handleGameOver] Score submission failed");
+          console.error("[handleGameOver] Score submission failed:", result.error);
           
-          // Don't mark as played so they can try again
-          setHasPlayedInRoom(false);
+          // Handle specific error cases
+          if (result.statusError) {
+            setNotification({
+              type: 'error',
+              message: `Cannot submit score - ${result.error}`
+            });
+          } else if (result.notPlayerError) {
+            setNotification({
+              type: 'error',
+              message: `You are not registered as a player in this room. Please join the room first.`
+            });
+          } else if (result.alreadySubmittedError) {
+            setNotification({
+              type: 'error',
+              message: `You have already submitted a score for this room.`
+            });
+            // Mark as played since they've already submitted
+            setHasPlayedInRoom(true);
+          } else {
+            // Generic error
+            setNotification({
+              type: 'error',
+              message: result.error || 'Error submitting score. Please try again.'
+            });
+          }
           
-          // Error notifications are handled by the submitScore function
+          // Don't mark as played if there was an error (except for already submitted)
+          if (!result.alreadySubmittedError) {
+            setHasPlayedInRoom(false);
+          }
         }
       } catch (error) {
         console.error("[handleGameOver] Error in overall score submission process:", error);
@@ -2964,9 +3042,16 @@ function GamesContent() {
       
       // Otherwise, join the room
       console.log(`Joining room ${roomId} with invite code: ${inviteCode}`);
-      const success = await joinRoom(roomId, inviteCode);
       
-      if (success) {
+      // Show loading notification
+      setNotification({
+        type: 'info',
+        message: 'Joining room... Please wait'
+      });
+      
+      const result = await joinRoom(roomId, inviteCode);
+      
+      if (result.success) {
         setNotification({
           type: 'success',
           message: 'Joined room successfully!'
@@ -2979,10 +3064,29 @@ function GamesContent() {
         // Refresh balance
         refreshBalance();
       } else {
-        setNotification({
-          type: 'error',
-          message: 'Failed to join room. Please try again.'
-        });
+        // Handle specific error cases
+        if (result.insufficientBalance) {
+          setNotification({
+            type: 'error',
+            message: 'Insufficient balance. You need more points to join this room.'
+          });
+          
+          // Show option to go to dashboard to convert tokens
+          setTimeout(() => {
+            setNotification({
+              type: 'info',
+              message: 'Would you like to go to the dashboard to convert CORE tokens to points?'
+            });
+            
+            // Add a button to the notification to go to dashboard
+            // This is handled in the notification component
+          }, 3000);
+        } else {
+          setNotification({
+            type: 'error',
+            message: result.error || 'Failed to join room. Please try again.'
+          });
+        }
       }
     } catch (error: any) {
       console.error("Error joining room:", error);

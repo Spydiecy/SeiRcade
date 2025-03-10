@@ -8,107 +8,84 @@ interface AIChallengeProps {
   onStart: () => void;
   disabled?: boolean; // Indicates if the player has already played in this room
   isCreator?: boolean; // Indicates if the player created this room
+  inRoom?: boolean; // Indicates if the game is being played in a room
 }
 
 // Import Google Generative AI library
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
-export default function AIChallenge({ onGameOver, onStart, disabled = false, isCreator = false }: AIChallengeProps) {
+export default function AIChallenge({ onGameOver, onStart, disabled = false, isCreator = false, inRoom = false }: AIChallengeProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'gameOver'>('ready');
   const [targetWord, setTargetWord] = useState<string>('');
   const [userMessage, setUserMessage] = useState<string>('');
   const [aiResponses, setAiResponses] = useState<{message: string, timestamp: string}[]>([]);
   const [timer, setTimer] = useState<number>(60);
-  const [score, setScore] = useState<number>(0);
+  const [score, setScore] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [wordList, setWordList] = useState<string[]>([]);
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const responsesRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Modify the disabled check to allow room creators to play
-  const isPlayDisabled = disabled && !isCreator;
+  // Modify the disabled check to only apply when in a room
+  const isPlayDisabled = inRoom && disabled && !isCreator;
 
-  // Target word categories and difficulty levels
-  const wordCategories = {
-    easy: [
-      'banana', 'apple', 'orange', 'pizza', 'music', 
-      'happy', 'smile', 'party', 'dance', 'beach',
-      'summer', 'winter', 'movie', 'cookie', 'dragon',
-      'planet', 'forest', 'garden', 'castle', 'island'
-    ],
-    medium: [
-      'elephant', 'symphony', 'detective', 'adventure', 'telescope',
-      'carnival', 'waterfall', 'dinosaur', 'marathon', 'treasure',
-      'journey', 'pyramid', 'volcano', 'symphony', 'orchestra',
-      'diamond', 'mystery', 'festival', 'blossom', 'horizon'
-    ],
-    hard: [
-      'algorithm', 'philosophy', 'serendipity', 'kaleidoscope', 'quintessential',
-      'perpendicular', 'extraordinary', 'circumference', 'spontaneous', 'fluorescent',
-      'juxtaposition', 'mathematical', 'ambidextrous', 'clandestine', 'photosynthesis',
-      'chrysanthemum', 'hippopotamus', 'reconnaissance', 'phenomenon', 'hieroglyphics'
-    ]
-  };
+  // Single word list with a good mix of difficulty levels
+  const gameWords = [
+    'banana', 'apple', 'orange', 'pizza', 'music', 
+    'happy', 'smile', 'party', 'dance', 'beach',
+    'elephant', 'adventure', 'treasure', 'journey', 'festival',
+    'diamond', 'mystery', 'horizon', 'algorithm', 'philosophy',
+    'universe', 'challenge', 'victory', 'harmony', 'pioneer',
+    'creativity', 'imagination', 'enthusiasm', 'paradox', 'miracle'
+  ];
 
-  // Initialize the game
+  // Load words on component mount
   useEffect(() => {
-    // Combine all difficulty levels
-    const allWords = [
-      ...wordCategories.easy,
-      ...wordCategories.medium,
-      ...wordCategories.hard
-    ];
-    
-    // Shuffle words
-    const shuffledWords = [...allWords].sort(() => Math.random() - 0.5);
-    setWordList(shuffledWords);
-    
-    return () => {
-      // Clean up timer on unmount
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
+    setWordList(gameWords);
   }, []);
 
   // Start a new game
   const startGame = () => {
-    // Don't allow starting if disabled (unless creator)
     if (isPlayDisabled) return;
     
-    // Notify parent that game has started
     onStart();
     
-    // Select a random target word based on difficulty
-    const category = wordCategories[difficulty];
-    const randomWord = category[Math.floor(Math.random() * category.length)];
-    setTargetWord(randomWord);
-    
-    // Update game state
+    // Initialize game state
     setGameState('playing');
     setTimer(60);
-    setScore(0);
+    setScore(1);
     setAiResponses([]);
     
+    // Select a random word from our single list
+    const randomWord = gameWords[Math.floor(Math.random() * gameWords.length)];
+    setTargetWord(randomWord);
+    
+    console.log(`Game started with target word: ${randomWord}`);
+    
     // Start the timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    
     timerIntervalRef.current = setInterval(() => {
-      setTimer(prev => {
-        if (prev <= 1) {
-          // Time's up - end the game
+      setTimer(prevTimer => {
+        if (prevTimer <= 1) {
+          // Time's up
           if (timerIntervalRef.current) {
             clearInterval(timerIntervalRef.current);
           }
-          endGame(score);
+          
+          // End the game with current score if timer reaches 0
+          endGame(0);
           return 0;
         }
-        return prev - 1;
+        return prevTimer - 1;
       });
     }, 1000);
     
-    // Focus the input field
+    // Focus the input
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -171,7 +148,7 @@ User message: ${message}`;
       const chanceToSayWord = Math.max(0.1, Math.min(0.7, 1 - (timeLeft / 60)));
       
       // Get word difficulty modifier - harder words have higher chance
-      const difficultyModifier = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 1.0 : 1.3;
+      const difficultyModifier = 1.0;
       
       if (Math.random() < chanceToSayWord * difficultyModifier) {
         // This is directly connected to difficulty - we want to ensure game is beatable but challenging
@@ -217,7 +194,7 @@ User message: ${message}`;
     const chanceToSayWord = Math.max(0.1, Math.min(0.8, 1 - (timeLeft / 60)));
     
     // Difficulty modifier
-    const difficultyModifier = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 1.0 : 1.3;
+    const difficultyModifier = 1.0;
     
     if (Math.random() < chanceToSayWord * difficultyModifier) {
       // Generate a response that naturally includes the target word
@@ -301,10 +278,8 @@ User message: ${message}`;
         
         // Check if the AI said the target word
         if (containsTargetWord(aiResponse, targetWord)) {
-          // Calculate score based on remaining time and difficulty
-          const timeBonus = Math.floor(timer * 1.5);
-          const difficultyBonus = difficulty === 'easy' ? 50 : difficulty === 'medium' ? 100 : 200;
-          const finalScore = 100 + timeBonus + difficultyBonus;
+          // Calculate score using our new function
+          const finalScore = calculateScore(timer);
           
           // Update score
           setScore(finalScore);
@@ -357,125 +332,61 @@ User message: ${message}`;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Determine the difficulty of the target word
-  const getWordDifficulty = (word: string): 'easy' | 'medium' | 'hard' => {
-    if (wordCategories.easy.includes(word)) return 'easy';
-    if (wordCategories.medium.includes(word)) return 'medium';
-    return 'hard';
-  };
-
-  // Get color based on difficulty
-  const getDifficultyColor = (difficulty: 'easy' | 'medium' | 'hard'): string => {
-    if (difficulty === 'easy') return 'text-neon-green';
-    if (difficulty === 'medium') return 'text-neon-blue';
-    return 'text-neon-pink';
-  };
-
-  // Get time color based on remaining time
-  const getTimeColor = (time: number): string => {
-    if (time > 30) return 'text-neon-green';
-    if (time > 10) return 'text-neon-blue';
-    return 'text-neon-pink';
+  // Update the score calculation for the single difficulty
+  const calculateScore = (remainingTime: number): number => {
+    // Base score of 100
+    const baseScore = 100;
+    
+    // Time bonus is 1.5x remaining time
+    const timeBonus = Math.floor(remainingTime * 1.5);
+    
+    // Fixed bonus of 100 points
+    const fixedBonus = 100;
+    
+    // Final score (at least 1)
+    return Math.max(1, baseScore + timeBonus + fixedBonus);
   };
 
   return (
-    <div className={`w-full max-w-3xl mx-auto ${isPlayDisabled ? 'opacity-70' : ''}`}>
-      {/* Game header */}
-      <div className="bg-black/50 rounded-t-lg border-t border-l border-r border-neon-blue p-4 mb-0">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-arcade text-neon-blue">AI CHALLENGE</h2>
+    <div className="w-full max-w-4xl mx-auto bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+      {gameState === 'ready' ? (
+        <div className="p-6 flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-white mb-4">AI CHALLENGE</h2>
           
-          {gameState === 'playing' && (
-            <div className={`px-3 py-1 rounded-full font-mono ${getTimeColor(timer)}`}>
-              {formatTime(timer)}
+          <p className="text-gray-300 text-center mb-6">
+            Try to trick the AI into saying a specific word. You win when the AI says your target word!
+          </p>
+          
+          {isPlayDisabled ? (
+            <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-6 text-center">
+              <p className="text-red-400">You have already played in this room!</p>
+              <p className="text-gray-400 text-sm mt-2">Each player can only submit one score per room.</p>
             </div>
-          )}
-        </div>
-        
-        {gameState === 'playing' ? (
-          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-            <div>
-              <span className="text-gray-400 text-sm">Target Word: </span>
-              <span className={`font-bold ${getDifficultyColor(getWordDifficulty(targetWord))}`}>
-                {targetWord}
-              </span>
+          ) : inRoom && isCreator ? (
+            <div className="bg-green-900/30 border border-green-500 rounded-lg p-4 mb-6 text-center">
+              <p className="text-green-400">You are the room creator</p>
+              <p className="text-gray-400 text-sm mt-2">Set your score to challenge other players!</p>
             </div>
-            <div>
-              <span className="text-gray-400 text-sm">Score: </span>
-              <span className="text-neon-green">{score}</span>
-            </div>
-          </div>
-        ) : gameState === 'gameOver' ? (
-          <div className="text-center">
-            <div className="text-gray-300 text-sm">Game Over! Final Score: <span className="text-neon-green font-bold">{score}</span></div>
-          </div>
-        ) : (
-          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
-            <div className="flex items-center">
-              <span className="text-gray-400 text-sm mr-2">Difficulty:</span>
-              <select 
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-                disabled={isPlayDisabled}
-                className="bg-black border border-neon-blue rounded px-2 py-1 text-white text-sm"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-            
-            <button 
-              onClick={startGame}
-              disabled={isPlayDisabled}
-              className={`arcade-button-blue text-sm py-1 px-4 ${isPlayDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              START GAME
-            </button>
-          </div>
-        )}
-      </div>
-      
-      {/* Disabled overlay */}
-      {isPlayDisabled && (
-        <div className="relative mb-4">
-          <div className="absolute inset-0 bg-black/80 z-10 flex items-center justify-center rounded-lg border border-neon-pink">
-            <div className="text-center p-4">
-              <p className="text-neon-pink text-xl font-arcade mb-2">ALREADY PLAYED</p>
-              <p className="text-white text-sm">You have already played in this room. Each player can only play once per room.</p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Rest of the component */}
-      <div className="bg-black/60 border-2 border-neon-blue rounded-lg p-4 md:p-6 shadow-lg shadow-neon-blue/20">
-        {/* Game content based on state */}
-        {gameState === 'ready' && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
+          ) : null}
+          
+          <button 
+            onClick={startGame}
+            disabled={isPlayDisabled}
+            className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-all duration-300 ${
+              isPlayDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            <h3 className="font-arcade text-2xl text-neon-pink mb-4">READY TO PLAY?</h3>
-            <p className="text-gray-300 mb-6 max-w-lg mx-auto">
-              Your challenge is to trick the AI into saying a specific word. You'll have 60 seconds to accomplish this task!
-            </p>
-            
-            {error && (
-              <div className="mt-4 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-          </motion.div>
-        )}
-        
-        {gameState === 'playing' && (
+            Start Game
+          </button>
+        </div>
+      ) : gameState === 'playing' ? (
+        <div className="bg-black/60 border-2 border-neon-blue rounded-lg p-4 md:p-6 shadow-lg shadow-neon-blue/20">
+          {/* Game content based on state */}
           <div>
             <div className="bg-black/80 border border-neon-pink p-4 rounded-md mb-4 text-center">
               <p className="text-gray-300 mb-2">Your target word is:</p>
               <h3 className="font-arcade text-2xl mb-2">
-                <span className={getDifficultyColor(getWordDifficulty(targetWord))}>
+                <span className="text-neon-pink">
                   {targetWord.toUpperCase()}
                 </span>
               </h3>
@@ -533,58 +444,32 @@ User message: ${message}`;
               </button>
             </form>
           </div>
-        )}
-        
-        {gameState === 'gameOver' && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            {score > 0 ? (
-              <>
-                <h3 className="font-arcade text-2xl text-neon-green mb-4">SUCCESS!</h3>
-                <p className="text-gray-300 mb-2">
-                  You successfully tricked the AI into saying "{targetWord}"!
-                </p>
-                <p className="text-xl font-arcade text-neon-pink mb-8">
-                  SCORE: {score}
-                </p>
-              </>
-            ) : (
-              <>
-                <h3 className="font-arcade text-2xl text-neon-pink mb-4">TIME'S UP!</h3>
-                <p className="text-gray-300 mb-8">
-                  You couldn't trick the AI into saying "{targetWord}".
-                </p>
-              </>
-            )}
+        </div>
+      ) : (
+        <div className="p-6 flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-white mb-2">Game Over!</h2>
+          
+          <div className="bg-black/30 p-6 rounded-lg w-full max-w-md my-6 text-center">
+            <p className="text-lg text-gray-300 mb-2">
+              Your word was: <span className="text-purple-400 font-bold">{targetWord}</span>
+            </p>
+            <p className="text-lg text-gray-300 mb-4">
+              Your score: <span className="text-green-400 font-bold">{score}</span>
+            </p>
             
-            <button 
-              onClick={resetGame}
-              className="arcade-button-glow-blue"
-            >
-              PLAY AGAIN
-            </button>
-          </motion.div>
-        )}
-      </div>
-      
-      <div className="mt-6 text-center text-gray-300 max-w-md mx-auto">
-        <h3 className="font-arcade text-neon-blue mb-2">HOW TO PLAY</h3>
-        <p className="text-sm mb-2">
-          Your goal is to trick the AI into saying the target word, without using the word yourself.
-        </p>
-        <p className="text-sm">
-          Ask clever questions or make statements that might lead the AI to use that specific word in its response.
-        </p>
-        
-        {error && gameState === 'playing' && (
-          <div className="mt-4 text-red-400 text-sm">
-            {error}
+            {inRoom ? (
+              <p className="text-yellow-400 mt-4">Score submitted!</p>
+            ) : (
+              <button 
+                onClick={resetGame}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300"
+              >
+                Play Again
+              </button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
