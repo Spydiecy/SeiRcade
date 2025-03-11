@@ -355,26 +355,26 @@ function GamesPageClient() {
       }
       
       // Store room details for future reference
-      setGameSessionData({
+        setGameSessionData({
         roomId: room.id,
-        entryFee: room.entryFee,
-        maxPlayers: room.maxPlayers,
-        gameType: room.gameType,
+          entryFee: room.entryFee,
+          maxPlayers: room.maxPlayers,
+          gameType: room.gameType,
         currentPlayers: room.currentPlayers,
         isCreator: isCreator,
         status: room.status
-      });
-      
+        });
+        
       if (room.gameType === 0) { // GameType.FlappyBird
-        setActiveGame('flappy-bird');
+          setActiveGame('flappy-bird');
       } else if (room.gameType === 1) { // GameType.AIChallenge
-        setActiveGame('ai-challenge');
+          setActiveGame('ai-challenge');
       } else {
         setNotification({
           type: 'error',
           message: `Unknown game type (${room.gameType})`
         });
-      }
+        }
       
       setIsLoading(false);
     } catch (error: any) {
@@ -434,9 +434,9 @@ function GamesPageClient() {
             return {
               id: roomId, // Ensure ID is a number
               game: room!.gameType === 0 ? 'FLAPPY BIRD' : 'AI CHALLENGE',
-              entry: room!.entryFee,
-              players: `${room!.currentPlayers}/${room!.maxPlayers}`,
-              time: formatTimeAgo(room!.creationTime),
+          entry: room!.entryFee,
+          players: `${room!.currentPlayers}/${room!.maxPlayers}`,
+          time: formatTimeAgo(room!.creationTime),
               type: room!.roomType === 0 ? 'PUBLIC' : 'PRIVATE'
             };
           })
@@ -502,8 +502,8 @@ function GamesPageClient() {
     }
     
     if (activeGame === 'flappy-bird') {
-      setGameScore(null);
-      setGameResult(null);
+    setGameScore(null);
+    setGameResult(null);
     } else if (activeGame === 'ai-challenge') {
       // AI Challenge setup
     }
@@ -615,8 +615,8 @@ function GamesPageClient() {
           
           // Handle specific error cases
           if (result.statusError) {
-            setNotification({
-              type: 'error',
+          setNotification({
+            type: 'error',
               message: `Cannot submit score - ${result.error}`
             });
           } else if (result.notPlayerError) {
@@ -1001,8 +1001,8 @@ function GamesPageClient() {
       } else {
         // Handle specific error cases
         if (result.insufficientBalance) {
-          setNotification({
-            type: 'error',
+        setNotification({
+          type: 'error',
             message: 'Insufficient balance. You need more points to join this room.'
           });
           
@@ -1250,8 +1250,8 @@ function GamesPageClient() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
+                </div>
+                
                   {activeRoomId && (
                     <button
                       onClick={() => handleClaimPrize(activeRoomId)}
@@ -1261,8 +1261,8 @@ function GamesPageClient() {
                       {isLoading ? 'Processing...' : 'Claim Prize'}
                     </button>
                   )}
-                </div>
-              )}
+                  </div>
+                )}
               
               <div className="mt-4 flex justify-center space-x-4">
                 <button
@@ -1308,24 +1308,24 @@ function GamesPageClient() {
                 )}
                 
                 {/* Game result */}
-                {gameResult && (
-                  <motion.div 
+          {gameResult && (
+            <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`mb-6 p-4 rounded-md ${
-                      gameResult.success 
+                gameResult.success 
                         ? 'bg-green-900/30 border border-neon-green' 
                         : 'bg-red-900/30 border border-red-500'
-                    }`}
-                  >
+              }`}
+            >
                     <h3 className={`text-xl font-arcade mb-2 ${
-                      gameResult.success ? 'text-neon-green' : 'text-red-400'
-                    }`}>
+                gameResult.success ? 'text-neon-green' : 'text-red-400'
+              }`}>
                       {gameResult.success ? 'YOU WON!' : 'GAME OVER'}
-                    </h3>
+              </h3>
                     <p className="text-gray-300 mb-4">{gameResult.message}</p>
-                    
-                    {gameResult.success && gameResult.winnings && (
+              
+              {gameResult.success && gameResult.winnings && (
                       <div className="mb-6">
                         <p className="text-neon-green text-lg font-arcade">
                           Prize: {parseInt(gameResult.winnings).toLocaleString()} points
@@ -1336,25 +1336,25 @@ function GamesPageClient() {
                         >
                           CLAIM PRIZE
                         </button>
-                      </div>
-                    )}
-                    
+                </div>
+              )}
+              
                     <div className="flex gap-4">
-                      <button
+                <button
                         onClick={resetGameSession}
                         className="arcade-button-blue"
-                      >
+                >
                         RETURN TO LOBBY
-                      </button>
+                </button>
                     </div>
-                  </motion.div>
-                )}
-                
+            </motion.div>
+          )}
+          
                 {/* Game score */}
                 {gameScore !== null && !gameResult && (
-                  <motion.div 
+          <motion.div
                     initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: 0 }}
                     className="mb-6 p-4 rounded-md bg-black/50 border border-neon-blue"
                   >
                     <h3 className="text-xl font-arcade text-neon-blue mb-2">SCORE SUBMITTED</h3>
@@ -1436,21 +1436,21 @@ function GamesPageClient() {
                     )}
                     
                     <div className="flex gap-4">
-                      <button
-                        onClick={resetGameSession}
-                        className="arcade-button-blue"
-                      >
+                <button
+                  onClick={resetGameSession}
+                  className="arcade-button-blue"
+                >
                         RETURN TO LOBBY
-                      </button>
-                    </div>
-                  </motion.div>
+                </button>
+              </div>
+          </motion.div>
                 )}
                 
                 {/* Game score */}
                 {gameScore !== null && !gameResult && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
                     className="mb-6 p-4 rounded-md bg-black/50 border border-neon-blue"
                   >
                     <h3 className="text-xl font-arcade text-neon-blue mb-2">SCORE SUBMITTED</h3>
@@ -1467,7 +1467,7 @@ function GamesPageClient() {
                   disabled={hasPlayedInRoom || gameScore !== null}
                   isCreator={gameSessionData?.isCreator}
                 />
-              </div>
+            </div>
             )}
             
             {(activeGame === 'cyber-racer' || activeGame === 'memory-hacker') && (
@@ -1476,37 +1476,37 @@ function GamesPageClient() {
                 <p className="text-gray-300 mb-8">
                   This game is currently in development and will be available soon!
                 </p>
-                <button
+              <button
                   onClick={resetGameSession}
                   className="arcade-button-blue"
-                >
+              >
                   BACK TO GAMES
-                </button>
+              </button>
               </div>
             )}
           </motion.div>
         </div>
       ) : (
         <div className="container mx-auto px-4 pt-12 pb-20">
-          <motion.div
+            <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+              animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
             <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ARCADE GAMES</h1>
             <p className="text-xl text-gray-300">Play, compete, and win CORE tokens</p>
-          </motion.div>
+            </motion.div>
           
           {/* Game Selection Grid */}
           <div className="mb-16">
             <h2 className="text-2xl font-arcade neon-text mb-6">SELECT A GAME</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableGames.map((game, index) => (
-                <GameCard 
-                  key={game.id} 
-                  game={game} 
-                  index={index}
+            {availableGames.map((game, index) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                index={index}
                   onClick={() => {
                     if (game.comingSoon) {
                       setNotification({
@@ -1517,8 +1517,8 @@ function GamesPageClient() {
                       setActiveGame(game.id);
                     }
                   }}
-                />
-              ))}
+              />
+            ))}
             </div>
           </div>
           
@@ -1548,12 +1548,12 @@ function GamesPageClient() {
                       const uniqueKey = `room-${room.id}-${index}`;
                       
                       return (
-                        <RoomCard 
+                      <RoomCard 
                           key={uniqueKey} 
-                          room={room} 
-                          index={index}
+                        room={room} 
+                        index={index}
                           onJoin={() => startJoinRoom(room.id, room.type === 'PRIVATE')}
-                        />
+                      />
                       );
                     })}
                   </div>
@@ -1576,12 +1576,12 @@ function GamesPageClient() {
                       >
                         REFRESH ROOMS
                       </button>
-                      <button
-                        onClick={() => setShowRoomModal(true)}
-                        className="arcade-button-green"
-                      >
-                        CREATE ROOM
-                      </button>
+                    <button
+                      onClick={() => setShowRoomModal(true)}
+                      className="arcade-button-green"
+                    >
+                      CREATE ROOM
+                    </button>
                     </div>
                   </div>
                 )}
@@ -1821,7 +1821,7 @@ function GamesPageClient() {
                 </div>
               </div>
             ) : (
-              <div>
+                <div>
                 <p className="text-gray-300 mb-4">
                   This is a private room. Please enter the invite code to join.
                 </p>
