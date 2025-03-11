@@ -24,9 +24,11 @@ export default function AIChallenge({ onGameOver, onStart, disabled = false, isC
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [wordList, setWordList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [highScore, setHighScore] = useState<number>(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const responsesRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
 
   // Modify the disabled check to only apply when in a room
   const isPlayDisabled = inRoom && disabled && !isCreator;
@@ -41,16 +43,29 @@ export default function AIChallenge({ onGameOver, onStart, disabled = false, isC
     'creativity', 'imagination', 'enthusiasm', 'paradox', 'miracle'
   ];
 
-  // Load words on component mount
+  // Load words and high score on component mount
   useEffect(() => {
     setWordList(gameWords);
+    
+    // Load high score from localStorage
+    const savedHighScore = localStorage.getItem('aiChallengeHighScore');
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore));
+    }
+    
+    return () => {
+      // Clean up timer on unmount
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
   }, []);
 
   // Start a new game
   const startGame = () => {
     if (isPlayDisabled) return;
     
-    onStart();
+    onStart(); // Notify parent component
     
     // Initialize game state
     setGameState('playing');
@@ -91,22 +106,71 @@ export default function AIChallenge({ onGameOver, onStart, disabled = false, isC
     }
   };
 
-  // End the game
+  // Format time to MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Get color based on remaining time
+  const getTimeColor = (time: number): string => {
+    if (time > 30) return 'text-neon-green';
+    if (time > 10) return 'text-neon-blue';
+    return 'text-neon-pink';
+  };
+
+  // Calculate score based on remaining time
+  const calculateScore = (remainingTime: number): number => {
+    // Base score of 100
+    const baseScore = 100;
+    
+    // Time bonus is 1.5x remaining time
+    const timeBonus = Math.floor(remainingTime * 1.5);
+    
+    // Fixed bonus of 100 points
+    const fixedBonus = 100;
+    
+    // Final score (at least 1)
+    return Math.max(1, baseScore + timeBonus + fixedBonus);
+  };
+
+  // End the game and submit score
   const endGame = (finalScore: number) => {
+    // Clear timer
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
     
+    // Update high score if needed
+    if (finalScore > highScore) {
+      setHighScore(finalScore);
+      localStorage.setItem('aiChallengeHighScore', finalScore.toString());
+    }
+    
+    // Update game state
     setGameState('gameOver');
+    
+    // Notify parent component
     onGameOver(finalScore);
   };
 
-  // Reset the game
+  // Reset game to start screen
   const resetGame = () => {
     setGameState('ready');
-    setUserMessage('');
+    setTimer(60);
+    setScore(1);
     setAiResponses([]);
+    setTargetWord('');
+    setUserMessage('');
     setError(null);
+    
+    // Clear timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
   };
 
   // Call Gemini API
@@ -325,150 +389,237 @@ User message: ${message}`;
     return regex.test(response);
   };
 
-  // Format the timer display
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Update the score calculation for the single difficulty
-  const calculateScore = (remainingTime: number): number => {
-    // Base score of 100
-    const baseScore = 100;
-    
-    // Time bonus is 1.5x remaining time
-    const timeBonus = Math.floor(remainingTime * 1.5);
-    
-    // Fixed bonus of 100 points
-    const fixedBonus = 100;
-    
-    // Final score (at least 1)
-    return Math.max(1, baseScore + timeBonus + fixedBonus);
-  };
-
   return (
-    <div className="w-full max-w-4xl mx-auto bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+    <div 
+      ref={gameContainerRef}
+      className="w-full max-w-4xl mx-auto bg-black/60 rounded-xl border-2 border-neon-blue shadow-lg shadow-neon-blue/20 overflow-hidden"
+    >
       {gameState === 'ready' ? (
-        <div className="p-6 flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-white mb-4">AI CHALLENGE</h2>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-8 flex flex-col items-center"
+        >
+          <h2 className="text-3xl font-arcade text-neon-blue mb-4 text-center glow-text-blue">AI CHALLENGE</h2>
           
-          <p className="text-gray-300 text-center mb-6">
-            Try to trick the AI into saying a specific word. You win when the AI says your target word!
-          </p>
+          <div className="w-16 h-16 mb-6 relative">
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.1, 1],
+                rotate: [0, 5, -5, 0] 
+              }}
+              transition={{ repeat: Infinity, duration: 3 }}
+              className="text-5xl"
+            >
+              🤖
+            </motion.div>
+            <motion.div 
+              animate={{ scale: [1.2, 1.5, 1.2] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="absolute -top-3 -right-3 text-2xl"
+            >
+              💬
+            </motion.div>
+          </div>
+          
+          <div className="bg-black/30 border border-neon-pink p-6 rounded-lg mb-8 max-w-2xl text-center">
+            <p className="text-gray-300 mb-4">
+              Your mission is to trick the AI into saying a specific target word without using the word yourself!
+            </p>
+            <div className="flex justify-between text-sm text-gray-400 mb-2">
+              <span>⏱️ 60-second timer</span>
+              <span>🏆 Score based on speed</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-400">
+              <span>🎯 Random target word</span>
+              <span>🧠 Strategy required</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between w-full max-w-md mb-6">
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">HIGH SCORE</p>
+              <p className="text-neon-green font-arcade text-xl">{highScore}</p>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">CURRENT SCORE</p>
+              <p className="text-neon-blue font-arcade text-xl">{score}</p>
+            </div>
+          </div>
           
           {isPlayDisabled ? (
-            <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-6 text-center">
-              <p className="text-red-400">You have already played in this room!</p>
+            <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-6 text-center w-full max-w-md">
+              <p className="text-red-400 font-arcade">ALREADY PLAYED</p>
               <p className="text-gray-400 text-sm mt-2">Each player can only submit one score per room.</p>
             </div>
           ) : inRoom && isCreator ? (
-            <div className="bg-green-900/30 border border-green-500 rounded-lg p-4 mb-6 text-center">
-              <p className="text-green-400">You are the room creator</p>
+            <div className="bg-green-900/30 border border-green-500 rounded-lg p-4 mb-6 text-center w-full max-w-md">
+              <p className="text-green-400 font-arcade">ROOM CREATOR</p>
               <p className="text-gray-400 text-sm mt-2">Set your score to challenge other players!</p>
             </div>
           ) : null}
           
-          <button 
+          <motion.button 
             onClick={startGame}
             disabled={isPlayDisabled}
-            className={`bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-all duration-300 ${
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`arcade-button-glow-blue font-arcade text-lg py-4 px-12 ${
               isPlayDisabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            Start Game
-          </button>
-        </div>
-      ) : gameState === 'playing' ? (
-        <div className="bg-black/60 border-2 border-neon-blue rounded-lg p-4 md:p-6 shadow-lg shadow-neon-blue/20">
-          {/* Game content based on state */}
-          <div>
-            <div className="bg-black/80 border border-neon-pink p-4 rounded-md mb-4 text-center">
-              <p className="text-gray-300 mb-2">Your target word is:</p>
-              <h3 className="font-arcade text-2xl mb-2">
-                <span className="text-neon-pink">
-                  {targetWord.toUpperCase()}
-                </span>
-              </h3>
-              <p className="text-xs text-gray-400">
-                Try to make the AI say this word without using it yourself
-              </p>
-            </div>
-            
-            <div 
-              ref={responsesRef}
-              className="bg-gray-900/50 rounded-md p-4 h-64 overflow-y-auto mb-4"
-            >
-              {aiResponses.length === 0 ? (
-                <div className="text-center text-gray-500 h-full flex items-center justify-center">
-                  <p>Begin the conversation to trick the AI!</p>
-                </div>
-              ) : (
-                aiResponses.map((response, index) => (
-                  <div key={index} className="mb-3">
-                    <div className={`${
-                      response.message.startsWith('You:') 
-                        ? 'text-neon-green' 
-                        : 'text-neon-blue'
-                    } text-sm`}>
-                      {response.message}
-                    </div>
-                    <div className="text-gray-500 text-xs">{response.timestamp}</div>
-                  </div>
-                ))
-              )}
-              
-              {isLoading && (
-                <div className="text-neon-blue text-sm">
-                  AI is thinking<span className="typing-dots"></span>
-                </div>
-              )}
-            </div>
-            
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <textarea
-                ref={inputRef}
-                value={userMessage}
-                onChange={(e) => setUserMessage(e.target.value)}
-                placeholder="Type your message here..."
-                className="flex-grow bg-black border-2 border-neon-green text-white p-2 rounded-md focus:outline-none focus:border-neon-blue resize-none"
-                rows={2}
-                disabled={isLoading || gameState !== 'playing'}
-              />
-              <button 
-                type="submit"
-                className="arcade-button-green self-end"
-                disabled={isLoading || !userMessage.trim() || gameState !== 'playing'}
-              >
-                SEND
-              </button>
-            </form>
-          </div>
-        </div>
-      ) : (
-        <div className="p-6 flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Game Over!</h2>
+            START GAME
+          </motion.button>
           
-          <div className="bg-black/30 p-6 rounded-lg w-full max-w-md my-6 text-center">
-            <p className="text-lg text-gray-300 mb-2">
-              Your word was: <span className="text-purple-400 font-bold">{targetWord}</span>
-            </p>
-            <p className="text-lg text-gray-300 mb-4">
-              Your score: <span className="text-green-400 font-bold">{score}</span>
-            </p>
+          <div className="mt-6 text-xs text-gray-500">
+            Press the button above to begin
+          </div>
+        </motion.div>
+      ) : gameState === 'playing' ? (
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="bg-black/50 border border-neon-blue px-4 py-2 rounded-md">
+              <span className="text-sm text-gray-400 mr-2">Score:</span>
+              <span className="text-neon-blue font-arcade">{score}</span>
+            </div>
             
-            {inRoom ? (
-              <p className="text-yellow-400 mt-4">Score submitted!</p>
+            <div className={`bg-black/50 border border-neon-pink px-4 py-2 rounded-md ${getTimeColor(timer)}`}>
+              <span className="text-sm text-gray-400 mr-2">Time:</span>
+              <span className="font-arcade">{formatTime(timer)}</span>
+            </div>
+          </div>
+          
+          <div className="bg-black/80 border-2 border-neon-pink p-4 rounded-lg mb-4 text-center">
+            <p className="text-gray-300 mb-2">Your target word is:</p>
+            <h3 className="font-arcade text-3xl mb-2">
+              <span className="text-neon-pink glow-text-pink">
+                {targetWord.toUpperCase()}
+              </span>
+            </h3>
+            <p className="text-xs text-gray-400">
+              Try to make the AI say this word without using it yourself
+            </p>
+          </div>
+          
+          <div 
+            ref={responsesRef}
+            className="bg-black/70 border border-neon-blue rounded-lg p-4 h-64 overflow-y-auto mb-4 shadow-inner"
+          >
+            {aiResponses.length === 0 ? (
+              <div className="text-center text-gray-500 h-full flex flex-col items-center justify-center">
+                <span className="text-3xl mb-4">💬</span>
+                <p>Begin the conversation to trick the AI!</p>
+                <p className="text-xs mt-2 text-gray-600">Be creative with your questions and statements</p>
+              </div>
             ) : (
-              <button 
-                onClick={resetGame}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all duration-300"
+              aiResponses.map((response, index) => (
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="mb-3"
+                >
+                  <div className={`${
+                    response.message.startsWith('You:') 
+                      ? 'text-neon-green' 
+                      : 'text-neon-blue'
+                  }`}>
+                    {response.message}
+                  </div>
+                  <div className="text-gray-500 text-xs">{response.timestamp}</div>
+                </motion.div>
+              ))
+            )}
+            
+            {isLoading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-neon-blue"
               >
-                Play Again
-              </button>
+                AI is thinking<span className="typing-dots"></span>
+              </motion.div>
             )}
           </div>
+          
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <textarea
+              ref={inputRef}
+              value={userMessage}
+              onChange={(e) => setUserMessage(e.target.value)}
+              placeholder="Type your message here..."
+              className="flex-grow bg-black/70 border-2 border-neon-green text-white p-3 rounded-lg focus:outline-none focus:border-neon-blue resize-none"
+              rows={2}
+              disabled={isLoading || gameState !== 'playing'}
+            />
+            <motion.button 
+              type="submit"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="arcade-button-glow-green self-end"
+              disabled={isLoading || !userMessage.trim() || gameState !== 'playing'}
+            >
+              SEND
+            </motion.button>
+          </form>
         </div>
+      ) : (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-8 flex flex-col items-center"
+        >
+          <h2 className="text-3xl font-arcade mb-2">
+            {score > 1 ? (
+              <span className="text-neon-green glow-text-green">SUCCESS!</span>
+            ) : (
+              <span className="text-neon-pink glow-text-pink">TIME'S UP!</span>
+            )}
+          </h2>
+          
+          <div className="bg-black/50 border-2 border-neon-blue p-6 rounded-lg w-full max-w-md my-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <p className="text-gray-400 text-sm">Your word:</p>
+                <p className="text-neon-pink font-bold text-lg">{targetWord}</p>
+              </div>
+              
+              <div className="text-right">
+                <p className="text-gray-400 text-sm">Your score:</p>
+                <p className="text-neon-green font-arcade text-2xl">{score}</p>
+              </div>
+            </div>
+            
+            {score > 1 && (
+              <div className="bg-black/30 p-4 rounded-lg mb-4">
+                <p className="text-center text-neon-blue mb-2">Success! The AI said your word.</p>
+                {score > highScore && (
+                  <p className="text-center text-neon-green text-sm">New High Score!</p>
+                )}
+              </div>
+            )}
+            
+            {inRoom ? (
+              <div className="text-center mt-4">
+                <p className="text-yellow-400 font-arcade mb-2">SCORE SUBMITTED</p>
+                <p className="text-gray-400 text-sm">Waiting for other players...</p>
+              </div>
+            ) : (
+              <div className="flex justify-center mt-4">
+                <motion.button 
+                  onClick={resetGame}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="arcade-button-glow-blue"
+                >
+                  PLAY AGAIN
+                </motion.button>
+              </div>
+            )}
+          </div>
+        </motion.div>
       )}
     </div>
   );

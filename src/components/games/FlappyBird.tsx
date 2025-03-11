@@ -513,10 +513,25 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     // Draw background
     drawBackground(ctx);
     
+    // Draw border
+    ctx.strokeStyle = 'rgba(0, 225, 255, 0.8)'; // neon blue
+    ctx.lineWidth = 5;
+    ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+    
+    // Add arcade-style scanlines
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    for (let i = 0; i < canvas.height; i += 4) {
+      ctx.fillRect(0, i, canvas.width, 2);
+    }
+    
     // Draw bird in center
     const birdX = canvas.width / 4;
     const birdY = canvas.height / 2;
     drawBird(ctx, birdX, birdY);
+    
+    // Add glowing effect with shadow
+    ctx.shadowColor = 'rgba(0, 225, 255, 0.8)';
+    ctx.shadowBlur = 10;
     
     // Draw score
     ctx.font = '24px "Press Start 2P", cursive';
@@ -525,11 +540,37 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     ctx.fillText('Score: 1', 20, 40);
     ctx.fillText('Best: ' + highScore, 300, 40);
     
-    // Draw title
+    // Remove shadow for other elements
+    ctx.shadowBlur = 0;
+    
+    // Draw title with arcade style
     ctx.textAlign = 'center';
-    ctx.font = '36px "Press Start 2P", cursive';
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText('FLAPPY BIRD', canvas.width / 2, canvas.height / 3);
+    ctx.font = '40px "Press Start 2P", cursive';
+    ctx.fillStyle = '#FFD700'; // Gold color
+    ctx.fillText('FLAPPY BIRD', canvas.width / 2, canvas.height / 3 - 10);
+    
+    // Add subtitle
+    ctx.font = '14px "Press Start 2P", cursive';
+    ctx.fillStyle = '#FF00FF'; // Magenta
+    ctx.fillText('ARCADE EDITION', canvas.width / 2, canvas.height / 3 + 20);
+    
+    // Draw instructions box with glow effect
+    const boxWidth = 500;
+    const boxHeight = 120;
+    const boxX = (canvas.width - boxWidth) / 2;
+    const boxY = canvas.height / 2 + 20;
+    
+    // Draw box with glow
+    ctx.shadowColor = 'rgba(0, 225, 255, 0.5)';
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+    ctx.shadowBlur = 0;
+    
+    // Draw border
+    ctx.strokeStyle = '#FF00FF'; // Magenta border
+    ctx.lineWidth = 2;
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
     
     // Draw instructions
     ctx.font = '18px "Press Start 2P", cursive';
@@ -537,16 +578,27 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     
     if (isPlayDisabled) {
       // Show message if player has already played in this room
-      ctx.fillText('You have already played in this room', canvas.width / 2, canvas.height / 2 + 20);
-      ctx.fillText('Waiting for results...', canvas.width / 2, canvas.height / 2 + 60);
+      ctx.fillText('You have already played in this room', canvas.width / 2, boxY + 40);
+      ctx.fillText('Waiting for results...', canvas.width / 2, boxY + 80);
     } else if (inRoom && isCreator) {
       // Show special message for room creator
-      ctx.fillText('You are the room creator', canvas.width / 2, canvas.height / 2 + 20);
-      ctx.fillText('Click or press SPACE to set your score!', canvas.width / 2, canvas.height / 2 + 60);
+      ctx.fillText('You are the room creator', canvas.width / 2, boxY + 40);
+      ctx.fillText('Click or press SPACE to set your score!', canvas.width / 2, boxY + 80);
     } else {
       // Normal play instructions
-      ctx.fillText('Click or press SPACE to start', canvas.width / 2, canvas.height / 2 + 20);
-      ctx.fillText('Avoid the pipes!', canvas.width / 2, canvas.height / 2 + 60);
+      ctx.fillText('Click or press SPACE to start', canvas.width / 2, boxY + 40);
+      ctx.fillText('Avoid the pipes!', canvas.width / 2, boxY + 80);
+    }
+    
+    // Draw pulsing "PRESS SPACE" text
+    if (!isPlayDisabled) {
+      const now = Date.now();
+      // Pulsing effect
+      const pulse = Math.sin(now / 300) * 0.2 + 0.8;
+      
+      ctx.font = '24px "Press Start 2P", cursive';
+      ctx.fillStyle = `rgba(255, 255, 0, ${pulse})`; // Yellow with pulsing opacity
+      ctx.fillText('PRESS SPACE', canvas.width / 2, canvas.height - 60);
     }
   };
 
@@ -684,30 +736,68 @@ export default function FlappyBird({ onGameOver, onStart, disabled = false, isCr
     
     // Game over screen
     if (gameStateRef.current.gameOver) {
-      // Semi-transparent overlay
+      // Draw game over screen with better styling
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Draw game over text
+      // Add arcade scanlines
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      for (let i = 0; i < canvas.height; i += 4) {
+        ctx.fillRect(0, i, canvas.width, 2);
+      }
+      
+      // Draw game over text with glow
       ctx.textAlign = 'center';
-      ctx.font = '36px "Press Start 2P", cursive';
+      ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+      ctx.shadowBlur = 15;
+      ctx.font = '40px "Press Start 2P", cursive';
       ctx.fillStyle = '#FF4444';
-      ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
+      ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 70);
+      ctx.shadowBlur = 0;
+      
+      // Draw score box with glow
+      const boxWidth = 350;
+      const boxHeight = 180;
+      const boxX = (canvas.width - boxWidth) / 2;
+      const boxY = canvas.height / 2 - 30;
+      
+      // Draw box with glow
+      ctx.shadowColor = 'rgba(0, 225, 255, 0.5)';
+      ctx.shadowBlur = 15;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+      ctx.shadowBlur = 0;
+      
+      // Draw border
+      ctx.strokeStyle = '#00FFFF'; // Cyan border
+      ctx.lineWidth = 2;
+      ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
       
       // Show score
       ctx.font = '24px "Press Start 2P", cursive';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(`Score: ${scoreRef.current}`, canvas.width / 2, canvas.height / 2 + 20);
-      ctx.fillText(`High Score: ${Math.max(highScore, scoreRef.current)}`, canvas.width / 2, canvas.height / 2 + 60);
+      ctx.fillText(`FINAL SCORE: ${scoreRef.current}`, canvas.width / 2, boxY + 50);
+      
+      // Show high score with highlight if it's a new record
+      if (scoreRef.current >= highScore) {
+        ctx.fillStyle = '#FFFF00'; // Yellow for new high score
+        ctx.fillText(`NEW HIGH SCORE!`, canvas.width / 2, boxY + 100);
+      } else {
+        ctx.fillStyle = '#00FF00'; // Green
+        ctx.fillText(`HIGH SCORE: ${highScore}`, canvas.width / 2, boxY + 100);
+      }
       
       // Show different messages based on playing in a room
       if (inRoom) {
-        if (isCreator) {
-          ctx.fillText('Score submitted!', canvas.width / 2, canvas.height / 2 + 120);
-        } else {
-          ctx.fillText('Score submitted!', canvas.width / 2, canvas.height / 2 + 120);
-        }
+        // Message for room play
+        ctx.fillStyle = '#FFA500'; // Orange
+        ctx.fillText('SCORE SUBMITTED', canvas.width / 2, canvas.height / 2 + 120);
       } else {
+        // Pulsing restart message for normal play
+        const now = Date.now();
+        const pulse = Math.sin(now / 300) * 0.2 + 0.8;
+        
+        ctx.fillStyle = `rgba(0, 255, 255, ${pulse})`; // Cyan with pulsing opacity
         ctx.fillText('TAP TO RESTART', canvas.width / 2, canvas.height / 2 + 120);
       }
     }
