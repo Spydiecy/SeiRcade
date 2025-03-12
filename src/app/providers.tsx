@@ -7,21 +7,21 @@ import { PointsProvider } from './contexts/PointsContext';
 import { WalletProvider } from './contexts/WalletContext';
 
 export const monadTestnet = defineChain({
-  id: 1115,
+  id: 10143,
   name: 'Monad Testnet',
   network: 'monad-testnet',
   nativeCurrency: {
     decimals: 18,
-    name: 'Monad',
+    name: 'MON',
     symbol: 'MON',
   },
   rpcUrls: {
     default: {
-      http: ['https://monad-testnet.g.alchemy.com/v2/cPagatQQ9SL_dZvqKBJYoc_dG2cHbmcA', 'https://testnet-rpc.monad.xyz'],
+      http: ['https://testnet-rpc.monad.xyz'],
     },
   },
   blockExplorers: {
-    default: {name: 'Monad Testnet Explorer', url: 'https://monad-testnet.socialscan.io'},
+    default: {name: 'Monad Explorer', url: 'https://testnet.monadexplorer.com'},
   },
 });
 
@@ -35,7 +35,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: 'dark',
           accentColor: '#FF10F0',
-          logo: '/moncade-logo.png',
+          logo: 'https://moncade.vercel.app/moncade-logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
