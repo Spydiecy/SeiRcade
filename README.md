@@ -1,6 +1,6 @@
 # MonCade
 
-![Screenshot 2025-03-10 123251](https://github.com/user-attachments/assets/32524929-ed7c-460a-811b-2fad3d93ae56)
+![image](https://github.com/user-attachments/assets/6c0be3dd-e555-4d6c-b72c-471765282dd0)
 
 ## Play-to-Earn Gaming Platform on monad chain
 
