@@ -7,7 +7,7 @@ import GAME_ROOM_ABI from '../constants/gameRoomAbi';
 import STATISTICS_TRACKER_ABI from '../constants/statisticsTrackerAbi';
 
 /**
- * Custom hook to access the CoreCade smart contracts
+ * Custom hook to access the MonCade smart contracts
  * Initializes contract instances when wallet is connected
  */
 export function useContracts() {

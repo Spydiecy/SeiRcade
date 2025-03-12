@@ -11,7 +11,7 @@ type PointsContextType = {
   refreshBalance: () => Promise<void>;
   loading: boolean;
   error: string | null;
-  corePrice: number;
+  monadPrice: number;
   isLoadingPrice: boolean;
 };
 
@@ -28,26 +28,26 @@ export function PointsProvider({ children }: { children: ReactNode }) {
     error 
   } = usePointsManager();
 
-  const [corePrice, setCorePrice] = useState<number>(0);
+  const [monadPrice, setMonadPrice] = useState<number>(0);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
-  // Fetch CORE price
+  // Fetch MONAD price
   useEffect(() => {
-    const fetchCorePrice = async () => {
+    const fetchMonadPrice = async () => {
       try {
-        const response = await fetch('https://api.coinbase.com/v2/prices/CORECHAIN-USD/spot');
+        const response = await fetch('https://api.coinbase.com/v2/prices/MONAD-USD/spot');
         const data = await response.json();
-        setCorePrice(parseFloat(data.data.amount));
+        setMonadPrice(parseFloat(data.data.amount));
         setIsLoadingPrice(false);
       } catch (error) {
-        console.error('Error fetching CORE price:', error);
+        console.error('Error fetching MONAD price:', error);
         setIsLoadingPrice(false);
       }
     };
 
-    fetchCorePrice();
+    fetchMonadPrice();
     // Refresh price every 5 minutes
-    const interval = setInterval(fetchCorePrice, 300000);
+    const interval = setInterval(fetchMonadPrice, 300000);
     return () => clearInterval(interval);
   }, []);
 
@@ -72,7 +72,7 @@ export function PointsProvider({ children }: { children: ReactNode }) {
     refreshBalance,
     loading,
     error,
-    corePrice,
+    monadPrice,
     isLoadingPrice
   };
 

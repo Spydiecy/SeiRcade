@@ -80,8 +80,8 @@ export function usePointsManager() {
   };
   
   /**
-   * Convert Core tokens to platform points
-   * @param amount Amount of Core tokens to convert
+   * Convert monad tokens to platform points
+   * @param amount Amount of monad tokens to convert
    */
   const convertToPoints = async (amount: string | number) => {
     if (!pointsManager) {
@@ -117,7 +117,7 @@ export function usePointsManager() {
   };
   
   /**
-   * Withdraw platform points back to Core tokens
+   * Withdraw platform points back to monad tokens
    * @param amount Amount of points to withdraw
    */
   const withdrawPoints = async (amount: string | number) => {

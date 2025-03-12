@@ -65,7 +65,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.9 }}
               className="mb-12 text-gray-300 text-lg cyberpunk-text max-w-2xl mx-auto leading-relaxed"
             >
-              CoreCade is a futuristic gaming platform where your skills earn you real rewards on the Core blockchain.
+              MonCade is a futuristic gaming platform where your skills earn you real rewards on the monad chain.
             </motion.p>
             
             <motion.div
@@ -222,7 +222,7 @@ export default function Home() {
             <StepCard 
               number="01"
               title="DEPOSIT"
-              description="Convert Core tokens into platform points"
+              description="Convert monad tokens into platform points"
               color="blue"
               delay={0.3}
               icon="wallet"

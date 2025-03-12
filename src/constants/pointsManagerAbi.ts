@@ -215,7 +215,7 @@ const POINTS_MANAGER_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "TCORE_DECIMALS",
+		"name": "TMONAD_DECIMALS",
 		"outputs": [
 			{
 				"internalType": "uint256",

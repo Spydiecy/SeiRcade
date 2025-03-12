@@ -26,7 +26,7 @@ export default function DashboardPage() {
     refreshBalance,
     loading: pointsLoading, 
     error: pointsError,
-    corePrice,
+    monadPrice,
     isLoadingPrice 
   } = usePoints();
   
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       const success = await convertToPoints(depositAmount);
       
       if (success) {
-        showNotification('success', `Successfully deposited ${depositAmount} CORE!`);
+        showNotification('success', `Successfully deposited ${depositAmount} MONAD!`);
         setDepositAmount('');
         // Refresh balance
         await refreshBalance();
@@ -233,15 +233,15 @@ export default function DashboardPage() {
                     <p className="ml-2 text-gray-400 mb-1">PTS</p>
                   </div>
                   
-                  {!isLoadingPrice && corePrice > 0 && (
+                  {!isLoadingPrice && monadPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * corePrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * monadPrice).toFixed(2)} USD
                     </p>
                   )}
                 </div>
 
                 <div className="bg-black/30 border border-neon-blue p-6 rounded-md">
-                  <p className="text-gray-400 text-sm mb-2">Equivalent CORE Balance</p>
+                  <p className="text-gray-400 text-sm mb-2">Equivalent MONAD Balance</p>
                   <div className="flex items-end">
                     <p className="text-3xl font-arcade text-neon-blue">
                       {isLoading || pointsLoading ? (
@@ -252,12 +252,12 @@ export default function DashboardPage() {
                         (balance / 1000).toFixed(3)
                       )}
                     </p>
-                    <p className="ml-2 text-gray-400 mb-1">CORE</p>
+                    <p className="ml-2 text-gray-400 mb-1">MONAD</p>
                   </div>
                   
-                  {!isLoadingPrice && corePrice > 0 && (
+                  {!isLoadingPrice && monadPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * corePrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * monadPrice).toFixed(2)} USD
                     </p>
                   )}
                 </div>
@@ -276,11 +276,11 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-arcade text-white mb-4">DEPOSIT</h3>
                 <div className="text-gray-300 text-sm mb-4 space-y-2">
                   <p className="cyberpunk-text">
-                    Convert CORE tokens to platform points.
+                    Convert MONAD tokens to platform points.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Rate: 1 CORE = 1,000 Points
-                    {!isLoadingPrice && corePrice > 0 && ` (≈ $${corePrice.toFixed(2)} USD)`}
+                    Rate: 1 MONAD = 1,000 Points
+                    {!isLoadingPrice && monadPrice > 0 && ` (≈ $${monadPrice.toFixed(2)} USD)`}
                   </p>
                 </div>
                 
@@ -291,7 +291,7 @@ export default function DashboardPage() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     disabled={pointsLoading}
                     className="flex-grow bg-black/80 border border-neon-green text-white p-2 rounded-l-md focus:outline-none"
-                    placeholder="Amount in CORE"
+                    placeholder="Amount in MONAD"
                   />
                   <button
                     onClick={handleDeposit}
@@ -306,9 +306,9 @@ export default function DashboardPage() {
                     <p className="text-gray-300">
                       You will receive: {(parseFloat(depositAmount) * 1000).toLocaleString()} Points
                     </p>
-                    {!isLoadingPrice && corePrice > 0 && (
+                    {!isLoadingPrice && monadPrice > 0 && (
                       <p className="text-gray-400">
-                        Value: ${(parseFloat(depositAmount) * corePrice).toFixed(2)} USD
+                        Value: ${(parseFloat(depositAmount) * monadPrice).toFixed(2)} USD
                       </p>
                     )}
                   </div>
@@ -320,11 +320,11 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-arcade text-white mb-4">WITHDRAW</h3>
                 <div className="text-gray-300 text-sm mb-4 space-y-2">
                   <p className="cyberpunk-text">
-                    Convert platform points back to CORE tokens.
+                    Convert platform points back to MONAD tokens.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Rate: 1,000 Points = 1 CORE
-                    {!isLoadingPrice && corePrice > 0 && ` (≈ $${corePrice.toFixed(2)} USD)`}
+                    Rate: 1,000 Points = 1 MONAD
+                    {!isLoadingPrice && monadPrice > 0 && ` (≈ $${monadPrice.toFixed(2)} USD)`}
                   </p>
                 </div>
                 
@@ -348,11 +348,11 @@ export default function DashboardPage() {
                 {withdrawAmount && !isNaN(parseFloat(withdrawAmount)) && (
                   <div className="mt-2 text-sm space-y-1">
                     <p className="text-gray-300">
-                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(3)} CORE
+                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(3)} MONAD
                     </p>
-                    {!isLoadingPrice && corePrice > 0 && (
+                    {!isLoadingPrice && monadPrice > 0 && (
                       <p className="text-gray-400">
-                        Value: ${((parseFloat(withdrawAmount) / 1000) * corePrice).toFixed(2)} USD
+                        Value: ${((parseFloat(withdrawAmount) / 1000) * monadPrice).toFixed(2)} USD
                       </p>
                     )}
                   </div>

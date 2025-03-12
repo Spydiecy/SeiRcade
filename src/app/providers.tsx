@@ -6,22 +6,22 @@ import { useEffect, useState } from 'react';
 import { PointsProvider } from './contexts/PointsContext';
 import { WalletProvider } from './contexts/WalletContext';
 
-export const coreTestnet = defineChain({
+export const monadTestnet = defineChain({
   id: 1115,
-  name: 'Core Blockchain Testnet',
-  network: 'core-testnet',
+  name: 'Monad Testnet',
+  network: 'monad-testnet',
   nativeCurrency: {
     decimals: 18,
-    name: 'tCore',
-    symbol: 'tCORE',
+    name: 'Monad',
+    symbol: 'MON',
   },
   rpcUrls: {
     default: {
-      http: ['https://rpc.test.btcs.network'],
+      http: ['https://monad-testnet.g.alchemy.com/v2/cPagatQQ9SL_dZvqKBJYoc_dG2cHbmcA', 'https://testnet-rpc.monad.xyz'],
     },
   },
   blockExplorers: {
-    default: {name: 'Core Testnet Explorer', url: 'https://scan.test.btcs.network'},
+    default: {name: 'Monad Testnet Explorer', url: 'https://monad-testnet.socialscan.io'},
   },
 });
 
@@ -35,13 +35,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: 'dark',
           accentColor: '#FF10F0',
-          logo: 'https://corecade.vercel.app/corecade-logo.png',
+          logo: '/moncade-logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
         },
-        defaultChain: coreTestnet,
-        supportedChains: [coreTestnet],
+        defaultChain: monadTestnet,
+        supportedChains: [monadTestnet],
       }}
     >
       <WalletProvider>

@@ -30,16 +30,16 @@ export default function AboutPage() {
   // Sample FAQ data
   const faqItems = [
     { 
-      question: 'What is CoreCade?', 
-      answer: 'CoreCade is a play-to-earn gaming platform built on the Core blockchain. Players can compete in skill-based mini-games and earn real rewards in the form of tokens.' 
+      question: 'What is MonCade?', 
+      answer: 'MonCade is a play-to-earn gaming platform built on the monad chain. Players can compete in skill-based mini-games and earn real rewards in the form of tokens.' 
     },
     { 
       question: 'How do I get started?', 
-      answer: 'Connect your wallet, convert some Core tokens into platform points, and start playing games! You\'ll earn rewards based on your performance and skill.' 
+      answer: 'Connect your wallet, convert some monad tokens into platform points, and start playing games! You\'ll earn rewards based on your performance and skill.' 
     },
     { 
-      question: 'Is CoreCade secure?', 
-      answer: 'Yes, CoreCade is built on secure smart contracts that have been thoroughly audited. All game outcomes and prize distributions are transparent and verifiable on-chain.' 
+      question: 'Is MonCade secure?', 
+      answer: 'Yes, MonCade is built on secure smart contracts that have been thoroughly audited. All game outcomes and prize distributions are transparent and verifiable on-chain.' 
     },
     { 
       question: 'What games are available?', 
@@ -47,7 +47,7 @@ export default function AboutPage() {
     },
     { 
       question: 'How do rewards work?', 
-      answer: 'When you win a game, you receive a prize in the form of platform points. These can be converted back to Core tokens and withdrawn to your wallet.' 
+      answer: 'When you win a game, you receive a prize in the form of platform points. These can be converted back to monad tokens and withdrawn to your wallet.' 
     },
     { 
       question: 'Can I create my own game rooms?', 
@@ -72,7 +72,7 @@ export default function AboutPage() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ABOUT CORECADE</h1>
+          <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ABOUT MONCADE</h1>
           <p className="text-xl text-gray-300">Learn about our platform, vision, and the team behind it</p>
         </motion.div>
         
@@ -122,10 +122,10 @@ export default function AboutPage() {
                 <h2 className="text-2xl font-arcade text-neon-blue mb-6">Our Mission</h2>
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
-                    CoreCade was created with a simple yet powerful vision: to combine the nostalgic joy of arcade gaming with the innovative potential of blockchain technology. Our mission is to build a thriving play-to-earn ecosystem where skill is rewarded and fun is paramount.
+                    MonCade was created with a simple yet powerful vision: to combine the nostalgic joy of arcade gaming with the innovative potential of blockchain technology. Our mission is to build a thriving play-to-earn ecosystem where skill is rewarded and fun is paramount.
                   </p>
                   <p>
-                    We believe gaming should be accessible, engaging, and rewarding. By leveraging the Core blockchain, we've created a platform where players can compete in skill-based mini-games and earn real value based on their performance.
+                    We believe gaming should be accessible, engaging, and rewarding. By leveraging the monad chain, we've created a platform where players can compete in skill-based mini-games and earn real value based on their performance.
                   </p>
                 </div>
               </div>
@@ -144,7 +144,7 @@ export default function AboutPage() {
                       <span className="text-3xl">💰</span>
                     </div>
                     <h3 className="font-arcade text-neon-blue text-center mb-3">Deposit</h3>
-                    <p className="text-gray-400 text-center">Convert Core tokens into platform points that you can use to enter games and competitions.</p>
+                    <p className="text-gray-400 text-center">Convert monad tokens into platform points that you can use to enter games and competitions.</p>
                   </div>
                   
                   <div className="bg-black/30 p-6 rounded-lg border border-gray-800 hover:border-neon-green transition-all">
@@ -160,13 +160,13 @@ export default function AboutPage() {
                       <span className="text-3xl">🏆</span>
                     </div>
                     <h3 className="font-arcade text-neon-pink text-center mb-3">Earn</h3>
-                    <p className="text-gray-400 text-center">Win games to earn points which can be converted back to Core tokens and withdrawn.</p>
+                    <p className="text-gray-400 text-center">Win games to earn points which can be converted back to monad tokens and withdrawn.</p>
                   </div>
                 </div>
                 
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
-                    Our platform uses smart contracts to ensure fair play and transparent prize distribution. All game outcomes and transactions are recorded on the Core blockchain, making the entire process trustless and verifiable.
+                    Our platform uses smart contracts to ensure fair play and transparent prize distribution. All game outcomes and transactions are recorded on the monad chain, making the entire process trustless and verifiable.
                   </p>
                 </div>
               </div>
@@ -181,7 +181,7 @@ export default function AboutPage() {
                 <h2 className="text-2xl font-arcade text-neon-pink mb-6">Our Games</h2>
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
-                    CoreCade features a growing collection of skill-based mini-games, each with its own unique gameplay and challenge. Our games are designed to be easy to learn but difficult to master, rewarding practice and skill development.
+                    MonCade features a growing collection of skill-based mini-games, each with its own unique gameplay and challenge. Our games are designed to be easy to learn but difficult to master, rewarding practice and skill development.
                   </p>
                   <p>
                     From classic arcade-inspired titles to innovative new concepts, our game library offers something for every type of player. And we're constantly working on adding new experiences to keep the platform fresh and exciting.
@@ -260,7 +260,7 @@ export default function AboutPage() {
               </p>
               <div className="text-center">
                 <a 
-                  href="mailto:contact@corecade.io" 
+                  href="mailto:contact@moncade.io" 
                   className="bg-gradient-to-r from-neon-green to-neon-blue text-white font-bold py-3 px-8 rounded-full hover:from-neon-blue hover:to-neon-green transition-all duration-300 shadow-glow-blue"
                 >
                   GET IN TOUCH
@@ -294,7 +294,7 @@ export default function AboutPage() {
             <div className="mt-12 text-center">
               <p className="text-gray-400 mb-6">Still have questions? Feel free to reach out!</p>
               <a 
-                href="mailto:support@corecade.io" 
+                href="mailto:support@moncade.io" 
                 className="bg-gradient-to-r from-neon-pink to-purple-600 text-white font-bold py-3 px-8 rounded-full hover:from-purple-600 hover:to-neon-pink transition-all duration-300 shadow-glow-pink"
               >
                 CONTACT SUPPORT

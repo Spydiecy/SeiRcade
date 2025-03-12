@@ -1,28 +1,28 @@
-# CoreCade
+# MonCade
 
 ![Screenshot 2025-03-10 123251](https://github.com/user-attachments/assets/32524929-ed7c-460a-811b-2fad3d93ae56)
 
-## Play-to-Earn Gaming Platform on Core Blockchain
+## Play-to-Earn Gaming Platform on monad chain
 
-CoreCade is a skill-based competitive gaming platform built on the Core blockchain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of Core tokens.
+MonCade is a skill-based competitive gaming platform built on the monad chain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of monad tokens.
 
 ## 🎮 Project Overview
 
-CoreCade serves as a trustless intermediary, leveraging Core blockchain for transparent and secure prize distribution. Players convert Core tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
+MonCade serves as a trustless intermediary, leveraging monad chain for transparent and secure prize distribution. Players convert monad tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
 
 ### Target Audience
 - Casual gamers looking for competitive play with real rewards
 - Crypto enthusiasts interested in gaming applications
 - Mobile gamers familiar with skill-based competition
-- Core blockchain community members
+- monad chain community members
 
 ## ✨ Key Features
 
 ### Point System
-- **Core Token Conversion**: Users deposit CoreBTC which converts to platform points
+- **monad Token Conversion**: Users deposit MonadBTC which converts to platform points
 - **Flexible Denominations**: Various point packages available for different player budgets
 - **Quest Rewards**: Points earned through platform engagement and social activities
-- **Transparent Exchange Rate**: Clear conversion rates between Core tokens and platform points
+- **Transparent Exchange Rate**: Clear conversion rates between monad tokens and platform points
 
 ### Game Room Mechanics
 - **Public Rooms**: Open to anyone with the required entry fee
@@ -69,7 +69,7 @@ CoreCade serves as a trustless intermediary, leveraging Core blockchain for tran
 
 ### Blockchain Integration
 - **Authentication**: Privy Wallet for seamless user onboarding
-- **Smart Contracts**: Solidity contracts deployed on Core Testnet/Mainnet
+- **Smart Contracts**: Solidity contracts deployed on monad Testnet/Mainnet
 - **On-Chain Elements**:
   - Point balances
   - Game results
@@ -77,7 +77,7 @@ CoreCade serves as a trustless intermediary, leveraging Core blockchain for tran
   - Player statistics
 
 ### Smart Contract Architecture
-- **Points Management Contract**: Handles Core token/point conversion
+- **Points Management Contract**: Handles monad token/point conversion
 - **Game Room Contract**: Manages room creation and prize distribution
 - **Statistics Contract**: Records player and game statistics
 
@@ -89,7 +89,7 @@ CoreCade serves as a trustless intermediary, leveraging Core blockchain for tran
 
 ## 📦 Project Structure
 
-CoreCade follows a modular architecture with clear separation of concerns:
+MonCade follows a modular architecture with clear separation of concerns:
 
 ### Frontend Components
 - **UI Components**: Reusable interface elements with arcade-style aesthetics
@@ -104,7 +104,7 @@ CoreCade follows a modular architecture with clear separation of concerns:
 
 ### Integration Layer
 - **Wallet Connection**: Seamless Privy integration for walletless onboarding
-- **Blockchain Interface**: API for interacting with Core blockchain
+- **Blockchain Interface**: API for interacting with monad chain
 - **Data Persistence**: On-chain and off-chain data management
 
 ## 👥 Team
@@ -116,7 +116,7 @@ Passionate blockchain developer with 19+ hackathon wins globally. Selected among
 
 ## 📞 Contact
 
-For inquiries, please contact us at info@corecade.io
+For inquiries, please contact us at info@moncade.io
 
 **Official Links**
 - Website:

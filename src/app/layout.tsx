@@ -28,7 +28,7 @@ export default function RootLayout({
               {children}
             </main>
             <footer className="py-8 text-center text-gray-500 font-arcade text-xs">
-              <p>© 2025 CoreCade | Built on Core Blockchain</p>
+              <p>© 2025 MonCade | Built on monad chain</p>
             </footer>
           </div>
         </Providers>
