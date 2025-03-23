@@ -6,22 +6,23 @@ import { useEffect, useState } from 'react';
 import { PointsProvider } from './contexts/PointsContext';
 import { WalletProvider } from './contexts/WalletContext';
 
-export const monadTestnet = defineChain({
-  id: 10143,
-  name: 'Monad Testnet',
-  network: 'monad-testnet',
+export const educhainTestnet = defineChain({
+  id: 1337,
+  name: 'educhain Testnet',
+  network: 'educhain-testnet',
   nativeCurrency: {
     decimals: 18,
-    name: 'MON',
-    symbol: 'MON',
+    name: 'educhain',
+    symbol: 'EDU',
   },
   rpcUrls: {
     default: {
-      http: ['https://testnet-rpc.monad.xyz'],
+      http: ['https://testnet-rpc.educhain.xyz'],
+      webSocket: ['wss://testnet-rpc.educhain.xyz'],
     },
   },
   blockExplorers: {
-    default: {name: 'Monad Explorer', url: 'https://testnet.monadexplorer.com'},
+    default: {name: 'educhain Explorer', url: 'https://testnet.educhainexplorer.com'},
   },
 });
 
@@ -35,13 +36,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: 'dark',
           accentColor: '#FF10F0',
-          logo: 'https://moncade.vercel.app/moncade-logo.png',
+          logo: 'https://edurcade.vercel.app/edurcade-logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
         },
-        defaultChain: monadTestnet,
-        supportedChains: [monadTestnet],
+        defaultChain: educhainTestnet,
+        supportedChains: [educhainTestnet],
       }}
     >
       <WalletProvider>

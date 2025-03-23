@@ -215,12 +215,12 @@ const POINTS_MANAGER_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "TMONAD_DECIMALS",
+		"name": "TEDU_DECIMALS",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "uint8",
 				"name": "",
-				"type": "uint256"
+				"type": "uint8"
 			}
 		],
 		"stateMutability": "view",

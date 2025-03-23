@@ -24,9 +24,9 @@ export default function DashboardPage() {
     convertToPoints, 
     withdrawPoints, 
     refreshBalance,
-    loading: pointsLoading, 
-    error: pointsError,
-    monadPrice,
+    loading, 
+    error,
+    educhainPrice,
     isLoadingPrice 
   } = usePoints();
   
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       const success = await convertToPoints(depositAmount);
       
       if (success) {
-        showNotification('success', `Successfully deposited ${depositAmount} MONAD!`);
+        showNotification('success', `Successfully deposited ${depositAmount} EDU!`);
         setDepositAmount('');
         // Refresh balance
         await refreshBalance();
@@ -222,7 +222,7 @@ export default function DashboardPage() {
                   <p className="text-gray-400 text-sm mb-2">Available Points</p>
                   <div className="flex items-end">
                     <p className="text-4xl font-arcade text-neon-green">
-                      {isLoading || pointsLoading ? (
+                      {isLoading || loading ? (
                         <span className="loading-dots">
                           <span>.</span><span>.</span><span>.</span>
                         </span>
@@ -233,18 +233,18 @@ export default function DashboardPage() {
                     <p className="ml-2 text-gray-400 mb-1">PTS</p>
                   </div>
                   
-                  {!isLoadingPrice && monadPrice > 0 && (
+                  {!isLoadingPrice && educhainPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * monadPrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * educhainPrice).toFixed(2)} USD
                     </p>
                   )}
                 </div>
 
                 <div className="bg-black/30 border border-neon-blue p-6 rounded-md">
-                  <p className="text-gray-400 text-sm mb-2">Equivalent MONAD Balance</p>
+                  <p className="text-gray-400 text-sm mb-2">Equivalent EDU Balance</p>
                   <div className="flex items-end">
                     <p className="text-3xl font-arcade text-neon-blue">
-                      {isLoading || pointsLoading ? (
+                      {isLoading || loading ? (
                         <span className="loading-dots">
                           <span>.</span><span>.</span><span>.</span>
                         </span>
@@ -252,12 +252,12 @@ export default function DashboardPage() {
                         (balance / 1000).toFixed(3)
                       )}
                     </p>
-                    <p className="ml-2 text-gray-400 mb-1">MONAD</p>
+                    <p className="ml-2 text-gray-400 mb-1">EDU</p>
                   </div>
                   
-                  {!isLoadingPrice && monadPrice > 0 && (
+                  {!isLoadingPrice && educhainPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * monadPrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * educhainPrice).toFixed(2)} USD
                     </p>
                   )}
                 </div>
@@ -276,11 +276,11 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-arcade text-white mb-4">DEPOSIT</h3>
                 <div className="text-gray-300 text-sm mb-4 space-y-2">
                   <p className="cyberpunk-text">
-                    Convert MONAD tokens to platform points.
+                    Convert EDU tokens to platform points.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Rate: 1 MONAD = 1,000 Points
-                    {!isLoadingPrice && monadPrice > 0 && ` (≈ $${monadPrice.toFixed(2)} USD)`}
+                    Rate: 1 EDU = 1,000 Points
+                    {!isLoadingPrice && educhainPrice > 0 && ` (≈ $${educhainPrice.toFixed(2)} USD)`}
                   </p>
                 </div>
                 
@@ -289,16 +289,16 @@ export default function DashboardPage() {
                     type="number"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    disabled={pointsLoading}
+                    disabled={loading}
                     className="flex-grow bg-black/80 border border-neon-green text-white p-2 rounded-l-md focus:outline-none"
-                    placeholder="Amount in MONAD"
+                    placeholder="Amount in EDU"
                   />
                   <button
                     onClick={handleDeposit}
-                    disabled={pointsLoading || !depositAmount}
+                    disabled={loading || !depositAmount}
                     className="arcade-button-green rounded-l-none"
                   >
-                    {pointsLoading ? 'PROCESSING...' : 'DEPOSIT'}
+                    {loading ? 'PROCESSING...' : 'DEPOSIT'}
                   </button>
                 </div>
                 {depositAmount && !isNaN(parseFloat(depositAmount)) && (
@@ -306,9 +306,9 @@ export default function DashboardPage() {
                     <p className="text-gray-300">
                       You will receive: {(parseFloat(depositAmount) * 1000).toLocaleString()} Points
                     </p>
-                    {!isLoadingPrice && monadPrice > 0 && (
+                    {!isLoadingPrice && educhainPrice > 0 && (
                       <p className="text-gray-400">
-                        Value: ${(parseFloat(depositAmount) * monadPrice).toFixed(2)} USD
+                        Value: ${(parseFloat(depositAmount) * educhainPrice).toFixed(2)} USD
                       </p>
                     )}
                   </div>
@@ -320,11 +320,11 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-arcade text-white mb-4">WITHDRAW</h3>
                 <div className="text-gray-300 text-sm mb-4 space-y-2">
                   <p className="cyberpunk-text">
-                    Convert platform points back to MONAD tokens.
+                    Convert platform points back to EDU tokens.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Rate: 1,000 Points = 1 MONAD
-                    {!isLoadingPrice && monadPrice > 0 && ` (≈ $${monadPrice.toFixed(2)} USD)`}
+                    Rate: 1,000 Points = 1 EDU
+                    {!isLoadingPrice && educhainPrice > 0 && ` (≈ $${educhainPrice.toFixed(2)} USD)`}
                   </p>
                 </div>
                 
@@ -333,26 +333,26 @@ export default function DashboardPage() {
                     type="number"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    disabled={pointsLoading}
+                    disabled={loading}
                     className="flex-grow bg-black/80 border border-neon-pink text-white p-2 rounded-l-md focus:outline-none"
                     placeholder="Amount in points"
                   />
                   <button
                     onClick={handleWithdraw}
-                    disabled={pointsLoading || !withdrawAmount || parseFloat(withdrawAmount) > balance}
+                    disabled={loading || !withdrawAmount || parseFloat(withdrawAmount) > balance}
                     className="arcade-button-pink rounded-l-none"
                   >
-                    {pointsLoading ? 'PROCESSING...' : 'WITHDRAW'}
+                    {loading ? 'PROCESSING...' : 'WITHDRAW'}
                   </button>
                 </div>
                 {withdrawAmount && !isNaN(parseFloat(withdrawAmount)) && (
                   <div className="mt-2 text-sm space-y-1">
                     <p className="text-gray-300">
-                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(3)} MONAD
+                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(3)} EDU
                     </p>
-                    {!isLoadingPrice && monadPrice > 0 && (
+                    {!isLoadingPrice && educhainPrice > 0 && (
                       <p className="text-gray-400">
-                        Value: ${((parseFloat(withdrawAmount) / 1000) * monadPrice).toFixed(2)} USD
+                        Value: ${((parseFloat(withdrawAmount) / 1000) * educhainPrice).toFixed(2)} USD
                       </p>
                     )}
                   </div>

@@ -80,8 +80,8 @@ export function usePointsManager() {
   };
   
   /**
-   * Convert monad tokens to platform points
-   * @param amount Amount of monad tokens to convert
+   * Convert educhain tokens to platform points
+   * @param amount Amount of educhain tokens to convert
    */
   const convertToPoints = async (amount: string | number) => {
     if (!pointsManager) {
@@ -117,7 +117,7 @@ export function usePointsManager() {
   };
   
   /**
-   * Withdraw platform points back to monad tokens
+   * Withdraw platform points back to educhain tokens
    * @param amount Amount of points to withdraw
    */
   const withdrawPoints = async (amount: string | number) => {

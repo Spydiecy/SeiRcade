@@ -27,8 +27,8 @@ export default function RootLayout({
             <main className="pt-20 relative z-20">
               {children}
             </main>
-            <footer className="py-8 text-center text-gray-500 font-arcade text-xs">
-              <p>© 2025 MonCade | Built on monad chain</p>
+            <footer className="bg-black/50 border-t border-gray-800 py-4 text-center text-gray-500 text-sm">
+              <p>© 2025 eduRcade | Built on educhain chain</p>
             </footer>
           </div>
         </Providers>

@@ -1,6 +1,6 @@
 /**
- * MonCade smart contract addresses
- * TODO: Update these addresses after deploying the contracts on Monad Testnet
+ * eduRcade smart contract addresses
+ * TODO: Update these addresses after deploying the contracts on educhain Testnet
  */
 export const CONTRACTS = {
     GAME_ROOM: '0x76A7703F3BB0Da34921eCE88CD492eEF9692619b',
