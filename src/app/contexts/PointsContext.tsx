@@ -13,6 +13,7 @@ type PointsContextType = {
   error: string | null;
   educhainPrice: number;
   isLoadingPrice: boolean;
+  setManualPrice: (price: number) => void;
 };
 
 const PointsContext = createContext<PointsContextType | null>(null);
@@ -31,17 +32,32 @@ export function PointsProvider({ children }: { children: ReactNode }) {
   const [educhainPrice, setEduchainPrice] = useState<number>(0);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
+  // Function to manually set price for testing
+  const setManualPrice = (price: number) => {
+    console.log(`Manually setting EDU price to: $${price}`);
+    setEduchainPrice(price);
+  };
+
   // Fetch EDU price
   useEffect(() => {
     const fetchEduchainPrice = async () => {
       try {
-        const response = await fetch('https://api.coinbase.com/v2/prices/EDUCHAIN-USD/spot');
+        // Use CryptoCompare API to get the real EDU price
+        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=EDU&tsyms=USD');
         const data = await response.json();
-        setEduchainPrice(parseFloat(data.data.amount));
+        
+        if (data && data.USD) {
+          // Use the actual price from the API
+          setEduchainPrice(data.USD);
+        } else {
+          // Fallback price if API doesn't return expected data
+          console.warn('EDU price data not available from API, using fallback value');
+          setEduchainPrice(0.1471); // Reasonable fallback value
+        }
         setIsLoadingPrice(false);
       } catch (error) {
-        console.error('Error fetching EDUCHAIN price:', error);
-        setEduchainPrice(10); // Fallback price if API call fails
+        console.error('Error fetching EDU price:', error);
+        setEduchainPrice(0.1471); // Fallback price
         setIsLoadingPrice(false);
       }
     };
@@ -74,7 +90,8 @@ export function PointsProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     educhainPrice,
-    isLoadingPrice
+    isLoadingPrice,
+    setManualPrice
   };
 
   return (

@@ -249,7 +249,7 @@ export default function DashboardPage() {
                           <span>.</span><span>.</span><span>.</span>
                         </span>
                       ) : (
-                        (balance / 1000).toFixed(3)
+                        (balance / 1000).toFixed(6)
                       )}
                     </p>
                     <p className="ml-2 text-gray-400 mb-1">EDU</p>
@@ -279,8 +279,7 @@ export default function DashboardPage() {
                     Convert EDU tokens to platform points.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Rate: 1 EDU = 1,000 Points
-                    {!isLoadingPrice && educhainPrice > 0 && ` (≈ $${educhainPrice.toFixed(2)} USD)`}
+                    Fixed Rate: 1 EDU = 1,000 Points
                   </p>
                 </div>
                 
@@ -306,11 +305,9 @@ export default function DashboardPage() {
                     <p className="text-gray-300">
                       You will receive: {(parseFloat(depositAmount) * 1000).toLocaleString()} Points
                     </p>
-                    {!isLoadingPrice && educhainPrice > 0 && (
-                      <p className="text-gray-400">
-                        Value: ${(parseFloat(depositAmount) * educhainPrice).toFixed(2)} USD
-                      </p>
-                    )}
+                    <p className="text-gray-400">
+                      Value: ${(parseFloat(depositAmount) * educhainPrice).toFixed(2)} USD
+                    </p>
                   </div>
                 )}
               </div>
@@ -323,8 +320,7 @@ export default function DashboardPage() {
                     Convert platform points back to EDU tokens.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Rate: 1,000 Points = 1 EDU
-                    {!isLoadingPrice && educhainPrice > 0 && ` (≈ $${educhainPrice.toFixed(2)} USD)`}
+                    Fixed Rate: 1,000 Points = 1 EDU
                   </p>
                 </div>
                 
@@ -348,7 +344,7 @@ export default function DashboardPage() {
                 {withdrawAmount && !isNaN(parseFloat(withdrawAmount)) && (
                   <div className="mt-2 text-sm space-y-1">
                     <p className="text-gray-300">
-                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(3)} EDU
+                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(6)} EDU
                     </p>
                     {!isLoadingPrice && educhainPrice > 0 && (
                       <p className="text-gray-400">
