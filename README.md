@@ -113,13 +113,3 @@ eduRcade follows a modular architecture with clear separation of concerns:
 **Founder & Lead Developer**  
 Passionate blockchain developer with 19+ hackathon wins globally. Selected among 95 students for UZH Blockchain Summer School 2024. Expert in multi-chain development and Web3 innovation.  
 [LinkedIn](https://www.linkedin.com/in/tanishqgupta-tech/) · [Twitter/X](https://x.com/Tanishqistaken)
-
-## 📞 Contact
-
-For inquiries, please contact us at info@edurcade.io
-
-**Official Links**
-- Website:
-- Twitter:
-- Discord:
-- GitHub:
