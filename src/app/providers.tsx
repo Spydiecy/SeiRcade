@@ -8,7 +8,7 @@ import { WalletProvider } from './contexts/WalletContext';
 
 export const educhainTestnet = defineChain({
   id: 1337,
-  name: 'educhain Testnet',
+  name: 'Educhain Testnet',
   network: 'educhain-testnet',
   nativeCurrency: {
     decimals: 18,
@@ -17,12 +17,11 @@ export const educhainTestnet = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ['https://testnet-rpc.educhain.xyz'],
-      webSocket: ['wss://testnet-rpc.educhain.xyz'],
+      http: ['https://open-campus-codex-sepolia.drpc.org'],
     },
   },
   blockExplorers: {
-    default: {name: 'educhain Explorer', url: 'https://testnet.educhainexplorer.com'},
+    default: {name: 'educhain Explorer', url: 'https://opencampus-codex.blockscout.com'},
   },
 });
 
@@ -36,7 +35,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: 'dark',
           accentColor: '#FF10F0',
-          logo: 'https://edurcade.vercel.app/edurcade-logo.png',
+          logo: '/edurcade-logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
