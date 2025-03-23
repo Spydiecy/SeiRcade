@@ -2,19 +2,19 @@
 
 ![image](https://github.com/user-attachments/assets/cdfc398c-4e01-4369-9eb5-5057eb99a3d8)
 
-## Play-to-Earn Gaming Platform on educhain chain
+## Play-to-Earn Gaming Platform on educhain
 
-eduRcade is a skill-based competitive gaming platform built on the educhain chain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of educhain tokens.
+eduRcade is a skill-based competitive gaming platform built on the educhain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of educhain tokens.
 
 ## 🎮 Project Overview
 
-eduRcade serves as a trustless intermediary, leveraging educhain chain for transparent and secure prize distribution. Players convert educhain tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
+eduRcade serves as a trustless intermediary, leveraging educhain for transparent and secure prize distribution. Players convert educhain tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
 
 ### Target Audience
 - Casual gamers looking for competitive play with real rewards
 - Crypto enthusiasts interested in gaming applications
 - Mobile gamers familiar with skill-based competition
-- educhain chain community members
+- educhain community members
 
 ## ✨ Key Features
 
@@ -104,7 +104,7 @@ eduRcade follows a modular architecture with clear separation of concerns:
 
 ### Integration Layer
 - **Wallet Connection**: Seamless Privy integration for walletless onboarding
-- **Blockchain Interface**: API for interacting with educhain chain
+- **Blockchain Interface**: API for interacting with educhain
 - **Data Persistence**: On-chain and off-chain data management
 
 ## 👥 Team

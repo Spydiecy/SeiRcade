@@ -31,7 +31,7 @@ export default function AboutPage() {
   const faqItems = [
     { 
       question: 'What is eduRcade?', 
-      answer: 'eduRcade is a play-to-earn gaming platform built on the educhain chain. Players can compete in skill-based mini-games and earn real rewards in the form of tokens.' 
+      answer: 'eduRcade is a play-to-earn gaming platform built on the educhain. Players can compete in skill-based mini-games and earn real rewards in the form of tokens.' 
     },
     { 
       question: 'How do I get started?', 
@@ -125,7 +125,7 @@ export default function AboutPage() {
                     eduRcade was created with a simple yet powerful vision: to combine the nostalgic joy of arcade gaming with the innovative potential of blockchain technology. Our mission is to build a thriving play-to-earn ecosystem where skill is rewarded and fun is paramount.
                   </p>
                   <p>
-                    We believe gaming should be accessible, engaging, and rewarding. By leveraging the educhain chain, we've created a platform where players can compete in skill-based mini-games and earn real value based on their performance.
+                    We believe gaming should be accessible, engaging, and rewarding. By leveraging the educhain, we've created a platform where players can compete in skill-based mini-games and earn real value based on their performance.
                   </p>
                 </div>
               </div>
@@ -166,7 +166,7 @@ export default function AboutPage() {
                 
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
-                    Our platform uses smart contracts to ensure fair play and transparent prize distribution. All game outcomes and transactions are recorded on the educhain chain, making the entire process trustless and verifiable.
+                    Our platform uses smart contracts to ensure fair play and transparent prize distribution. All game outcomes and transactions are recorded on the educhain, making the entire process trustless and verifiable.
                   </p>
                 </div>
               </div>
