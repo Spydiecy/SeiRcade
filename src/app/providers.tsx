@@ -7,7 +7,7 @@ import { PointsProvider } from './contexts/PointsContext';
 import { WalletProvider } from './contexts/WalletContext';
 
 export const educhainTestnet = defineChain({
-  id: 1337,
+  id: 656476,
   name: 'Educhain Testnet',
   network: 'educhain-testnet',
   nativeCurrency: {
