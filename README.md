@@ -1,6 +1,6 @@
 # SeiRcade
 
-![image](https://github.com/user-attachments/assets/cdfc398c-4e01-4369-9eb5-5057eb99a3d8)
+![image](https://github.com/user-attachments/assets/c09e7c76-9cbd-4591-8e8a-240a96db639a)
 
 ## Play-to-Earn Gaming Platform on Sei Chain
 
