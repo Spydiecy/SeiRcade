@@ -1,28 +1,28 @@
-# eduRcade
+# seiRcade
 
 ![image](https://github.com/user-attachments/assets/cdfc398c-4e01-4369-9eb5-5057eb99a3d8)
 
-## Play-to-Earn Gaming Platform on educhain
+## Play-to-Earn Gaming Platform on Sei Chain
 
-eduRcade is a skill-based competitive gaming platform built on the educhain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of educhain tokens.
+seiRcade is a skill-based competitive gaming platform built on the Sei Chain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of SEI tokens.
 
 ## 🎮 Project Overview
 
-eduRcade serves as a trustless intermediary, leveraging educhain for transparent and secure prize distribution. Players convert educhain tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
+seiRcade serves as a trustless intermediary, leveraging Sei Chain for transparent and secure prize distribution. Players convert SEI tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
 
 ### Target Audience
 - Casual gamers looking for competitive play with real rewards
 - Crypto enthusiasts interested in gaming applications
 - Mobile gamers familiar with skill-based competition
-- educhain community members
+- Sei Chain community members
 
 ## ✨ Key Features
 
 ### Point System
-- **educhain Token Conversion**: Users deposit educhainBTC which converts to platform points
+- **SEI Token Conversion**: Users deposit SEI which converts to platform points
 - **Flexible Denominations**: Various point packages available for different player budgets
 - **Quest Rewards**: Points earned through platform engagement and social activities
-- **Transparent Exchange Rate**: Clear conversion rates between educhain tokens and platform points
+- **Transparent Exchange Rate**: Clear conversion rates between SEI tokens and platform points
 
 ### Game Room Mechanics
 - **Public Rooms**: Open to anyone with the required entry fee
@@ -69,7 +69,7 @@ eduRcade serves as a trustless intermediary, leveraging educhain for transparent
 
 ### Blockchain Integration
 - **Authentication**: Privy Wallet for seamless user onboarding
-- **Smart Contracts**: Solidity contracts deployed on educhain Testnet/Mainnet
+- **Smart Contracts**: Solidity contracts deployed on Sei Chain Testnet/Mainnet
 - **On-Chain Elements**:
   - Point balances
   - Game results
@@ -77,7 +77,7 @@ eduRcade serves as a trustless intermediary, leveraging educhain for transparent
   - Player statistics
 
 ### Smart Contract Architecture
-- **Points Management Contract**: Handles educhain token/point conversion
+- **Points Management Contract**: Handles SEI token/point conversion
 - **Game Room Contract**: Manages room creation and prize distribution
 - **Statistics Contract**: Records player and game statistics
 
@@ -89,7 +89,7 @@ eduRcade serves as a trustless intermediary, leveraging educhain for transparent
 
 ## 📦 Project Structure
 
-eduRcade follows a modular architecture with clear separation of concerns:
+seiRcade follows a modular architecture with clear separation of concerns:
 
 ### Frontend Components
 - **UI Components**: Reusable interface elements with arcade-style aesthetics
@@ -104,7 +104,7 @@ eduRcade follows a modular architecture with clear separation of concerns:
 
 ### Integration Layer
 - **Wallet Connection**: Seamless Privy integration for walletless onboarding
-- **Blockchain Interface**: API for interacting with educhain
+- **Blockchain Interface**: API for interacting with Sei Chain
 - **Data Persistence**: On-chain and off-chain data management
 
 ## 👥 Team

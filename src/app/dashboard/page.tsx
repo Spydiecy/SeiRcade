@@ -26,7 +26,7 @@ export default function DashboardPage() {
     refreshBalance,
     loading, 
     error,
-    educhainPrice,
+    seiPrice,
     isLoadingPrice 
   } = usePoints();
   
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       const success = await convertToPoints(depositAmount);
       
       if (success) {
-        showNotification('success', `Successfully deposited ${depositAmount} EDU!`);
+        showNotification('success', `Successfully deposited ${depositAmount} SEI!`);
         setDepositAmount('');
         // Refresh balance
         await refreshBalance();
@@ -233,15 +233,15 @@ export default function DashboardPage() {
                     <p className="ml-2 text-gray-400 mb-1">PTS</p>
                   </div>
                   
-                  {!isLoadingPrice && educhainPrice > 0 && (
+                  {!isLoadingPrice && seiPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * educhainPrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * seiPrice).toFixed(2)} USD
                     </p>
                   )}
                 </div>
 
                 <div className="bg-black/30 border border-neon-blue p-6 rounded-md">
-                  <p className="text-gray-400 text-sm mb-2">Equivalent EDU Balance</p>
+                  <p className="text-gray-400 text-sm mb-2">Equivalent SEI Balance</p>
                   <div className="flex items-end">
                     <p className="text-3xl font-arcade text-neon-blue">
                       {isLoading || loading ? (
@@ -252,12 +252,12 @@ export default function DashboardPage() {
                         (balance / 1000).toFixed(6)
                       )}
                     </p>
-                    <p className="ml-2 text-gray-400 mb-1">EDU</p>
+                    <p className="ml-2 text-gray-400 mb-1">SEI</p>
                   </div>
                   
-                  {!isLoadingPrice && educhainPrice > 0 && (
+                  {!isLoadingPrice && seiPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * educhainPrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * seiPrice).toFixed(2)} USD
                     </p>
                   )}
                 </div>
@@ -276,10 +276,10 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-arcade text-white mb-4">DEPOSIT</h3>
                 <div className="text-gray-300 text-sm mb-4 space-y-2">
                   <p className="cyberpunk-text">
-                    Convert EDU tokens to platform points.
+                    Convert SEI tokens to platform points.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Fixed Rate: 1 EDU = 1,000 Points
+                    Fixed Rate: 1 SEI = 1,000 Points
                   </p>
                 </div>
                 
@@ -290,7 +290,7 @@ export default function DashboardPage() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     disabled={loading}
                     className="flex-grow bg-black/80 border border-neon-green text-white p-2 rounded-l-md focus:outline-none"
-                    placeholder="Amount in EDU"
+                    placeholder="Amount in SEI"
                   />
                   <button
                     onClick={handleDeposit}
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                       You will receive: {(parseFloat(depositAmount) * 1000).toLocaleString()} Points
                     </p>
                     <p className="text-gray-400">
-                      Value: ${(parseFloat(depositAmount) * educhainPrice).toFixed(2)} USD
+                      Value: ${(parseFloat(depositAmount) * seiPrice).toFixed(2)} USD
                     </p>
                   </div>
                 )}
@@ -317,10 +317,10 @@ export default function DashboardPage() {
                 <h3 className="text-xl font-arcade text-white mb-4">WITHDRAW</h3>
                 <div className="text-gray-300 text-sm mb-4 space-y-2">
                   <p className="cyberpunk-text">
-                    Convert platform points back to EDU tokens.
+                    Convert platform points back to SEI tokens.
                   </p>
                   <p className="text-xs text-gray-400">
-                    Fixed Rate: 1,000 Points = 1 EDU
+                    Fixed Rate: 1,000 Points = 1 SEI
                   </p>
                 </div>
                 
@@ -344,11 +344,11 @@ export default function DashboardPage() {
                 {withdrawAmount && !isNaN(parseFloat(withdrawAmount)) && (
                   <div className="mt-2 text-sm space-y-1">
                     <p className="text-gray-300">
-                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(6)} EDU
+                      You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(6)} SEI
                     </p>
-                    {!isLoadingPrice && educhainPrice > 0 && (
+                    {!isLoadingPrice && seiPrice > 0 && (
                       <p className="text-gray-400">
-                        Value: ${((parseFloat(withdrawAmount) / 1000) * educhainPrice).toFixed(2)} USD
+                        Value: ${((parseFloat(withdrawAmount) / 1000) * seiPrice).toFixed(2)} USD
                       </p>
                     )}
                   </div>

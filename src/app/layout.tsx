@@ -28,7 +28,7 @@ export default function RootLayout({
               {children}
             </main>
             <footer className="bg-black/50 border-t border-gray-800 py-4 text-center text-gray-500 text-sm">
-              <p>© 2025 eduRcade | Built on educhain</p>
+              <p>© 2025 seiRcade | Built on Sei Chain</p>
             </footer>
           </div>
         </Providers>

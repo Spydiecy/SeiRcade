@@ -71,11 +71,11 @@ export default function Header() {
               className="w-10 h-10" 
               width={40} 
               height={40}
-              src="/edurcade-logo.png"
-              alt="eduRcade"
+              src="/seircade-logo.png"
+              alt="seiRcade"
               priority
             />
-            <span className="font-arcade text-xl text-white hidden sm:block">EDURCADE</span>
+            <span className="font-arcade text-xl text-white hidden sm:block">SEIRCADE</span>
           </a>
           
           {/* Desktop Navigation */}

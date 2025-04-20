@@ -11,7 +11,7 @@ type PointsContextType = {
   refreshBalance: () => Promise<void>;
   loading: boolean;
   error: string | null;
-  educhainPrice: number;
+  seiPrice: number;
   isLoadingPrice: boolean;
   setManualPrice: (price: number) => void;
 };
@@ -29,42 +29,42 @@ export function PointsProvider({ children }: { children: ReactNode }) {
     error 
   } = usePointsManager();
 
-  const [educhainPrice, setEduchainPrice] = useState<number>(0);
+  const [seiPrice, setSeiPrice] = useState<number>(0);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
 
   // Function to manually set price for testing
   const setManualPrice = (price: number) => {
-    console.log(`Manually setting EDU price to: $${price}`);
-    setEduchainPrice(price);
+    console.log(`Manually setting SEI price to: $${price}`);
+    setSeiPrice(price);
   };
 
-  // Fetch EDU price
+  // Fetch SEI price
   useEffect(() => {
-    const fetchEduchainPrice = async () => {
+    const fetchSeiPrice = async () => {
       try {
-        // Use CryptoCompare API to get the real EDU price
+        // Use CryptoCompare API to get the real SEI price
         const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=SEI&tsyms=USD');
         const data = await response.json();
         
         if (data && data.USD) {
           // Use the actual price from the API
-          setEduchainPrice(data.USD);
+          setSeiPrice(data.USD);
         } else {
           // Fallback price if API doesn't return expected data
-          console.warn('EDU price data not available from API, using fallback value');
-          setEduchainPrice(0.170); // Reasonable fallback value
+          console.warn('SEI price data not available from API, using fallback value');
+          setSeiPrice(0.170); // Reasonable fallback value
         }
         setIsLoadingPrice(false);
       } catch (error) {
-        console.error('Error fetching EDU price:', error);
-        setEduchainPrice(0.1471); // Fallback price
+        console.error('Error fetching SEI price:', error);
+        setSeiPrice(0.1471); // Fallback price
         setIsLoadingPrice(false);
       }
     };
 
-    fetchEduchainPrice();
+    fetchSeiPrice();
     // Refresh price every 5 minutes
-    const interval = setInterval(fetchEduchainPrice, 300000);
+    const interval = setInterval(fetchSeiPrice, 300000);
     return () => clearInterval(interval);
   }, []);
 
@@ -89,7 +89,7 @@ export function PointsProvider({ children }: { children: ReactNode }) {
     refreshBalance,
     loading,
     error,
-    educhainPrice,
+    seiPrice,
     isLoadingPrice,
     setManualPrice
   };

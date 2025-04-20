@@ -65,7 +65,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.9 }}
               className="mb-12 text-gray-300 text-lg cyberpunk-text max-w-2xl mx-auto leading-relaxed"
             >
-              eduRcade is a futuristic gaming platform where your skills earn you real rewards on the educhain.
+              SeiRcade is a futuristic gaming platform where your skills earn you real rewards on the Sei Chain.
             </motion.p>
             
             <motion.div
@@ -222,7 +222,7 @@ export default function Home() {
             <StepCard 
               number="01"
               title="DEPOSIT"
-              description="Convert educhain tokens into platform points"
+              description="Convert SEI tokens into platform points"
               color="blue"
               delay={0.3}
               icon="wallet"

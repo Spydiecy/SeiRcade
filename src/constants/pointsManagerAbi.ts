@@ -215,7 +215,7 @@ const POINTS_MANAGER_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "TEDU_DECIMALS",
+		"name": "TSEI_DECIMALS",
 		"outputs": [
 			{
 				"internalType": "uint8",

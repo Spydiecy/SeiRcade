@@ -1010,7 +1010,7 @@ function GamesPageClient() {
           setTimeout(() => {
             setNotification({
               type: 'info',
-              message: 'Would you like to go to the dashboard to convert EDU tokens to points?'
+              message: 'Would you like to go to the dashboard to convert SEI tokens to points?'
             });
             
             // Add a button to the notification to go to dashboard
@@ -1495,7 +1495,7 @@ function GamesPageClient() {
             className="text-center mb-16"
           >
             <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ARCADE GAMES</h1>
-            <p className="text-xl text-gray-300">Play, compete, and win EDU tokens</p>
+            <p className="text-xl text-gray-300">Play, compete, and win SEI tokens</p>
             </motion.div>
           
           {/* Game Selection Grid */}
@@ -1760,7 +1760,7 @@ function GamesPageClient() {
               <div className="text-center p-4">
                 <p className="text-neon-pink text-lg mb-4">Insufficient Balance</p>
                 <p className="text-gray-300 mb-6">
-                  You need points to create a game room. Visit your dashboard to convert EDU tokens to points.
+                  You need points to create a game room. Visit your dashboard to convert SEI tokens to points.
                 </p>
                 <div className="flex justify-center gap-4">
                   <button
@@ -3075,7 +3075,7 @@ function GamesContent() {
           setTimeout(() => {
             setNotification({
               type: 'info',
-              message: 'Would you like to go to the dashboard to convert EDU tokens to points?'
+              message: 'Would you like to go to the dashboard to convert SEI tokens to points?'
             });
             
             // Add a button to the notification to go to dashboard
@@ -3560,7 +3560,7 @@ function GamesContent() {
             className="text-center mb-16"
           >
             <h1 className="text-4xl md:text-5xl font-arcade text-white mb-4">ARCADE GAMES</h1>
-            <p className="text-xl text-gray-300">Play, compete, and win EDU tokens</p>
+            <p className="text-xl text-gray-300">Play, compete, and win SEI tokens</p>
           </motion.div>
           
           {/* Game Selection Grid */}
@@ -3825,7 +3825,7 @@ function GamesContent() {
               <div className="text-center p-4">
                 <p className="text-neon-pink text-lg mb-4">Insufficient Balance</p>
                 <p className="text-gray-300 mb-6">
-                  You need points to create a game room. Visit your dashboard to convert EDU tokens to points.
+                  You need points to create a game room. Visit your dashboard to convert SEI tokens to points.
                 </p>
                 <div className="flex justify-center gap-4">
                   <button

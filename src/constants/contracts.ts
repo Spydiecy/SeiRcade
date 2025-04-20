@@ -1,6 +1,6 @@
 /**
- * eduRcade smart contract addresses
- * TODO: Update these addresses after deploying the contracts on educhain Testnet
+ * SeiRcade smart contract addresses
+ * TODO: Update these addresses after deploying the contracts on Sei Chain Testnet
  */
 export const CONTRACTS = {
     GAME_ROOM: '0x49Fa28Fa19cFb67c85a0e7cBFB155D5ae440412E',
