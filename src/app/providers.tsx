@@ -6,22 +6,22 @@ import { useEffect, useState } from 'react';
 import { PointsProvider } from './contexts/PointsContext';
 import { WalletProvider } from './contexts/WalletContext';
 
-export const educhainTestnet = defineChain({
-  id: 656476,
-  name: 'Educhain Testnet',
-  network: 'educhain-testnet',
+export const seiTestnet = defineChain({
+  id: 1328,
+  name: 'Sei Testnet',
+  network: 'sei-testnet',
   nativeCurrency: {
     decimals: 18,
-    name: 'educhain',
-    symbol: 'EDU',
+    name: 'sei',
+    symbol: 'SEI',
   },
   rpcUrls: {
     default: {
-      http: ['https://open-campus-codex-sepolia.drpc.org'],
+      http: ['https://evm-rpc-testnet.sei-apis.com'],
     },
   },
   blockExplorers: {
-    default: {name: 'educhain Explorer', url: 'https://opencampus-codex.blockscout.com'},
+    default: {name: 'Sei Explorer', url: 'https://testnet.seistream.app'},
   },
 });
 
@@ -35,13 +35,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: 'dark',
           accentColor: '#FF10F0',
-          logo: '/edurcade-logo.png',
+          logo: '/seircade-logo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
         },
-        defaultChain: educhainTestnet,
-        supportedChains: [educhainTestnet],
+        defaultChain: seiTestnet,
+        supportedChains: [seiTestnet],
       }}
     >
       <WalletProvider>

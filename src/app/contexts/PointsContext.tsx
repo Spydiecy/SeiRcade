@@ -43,7 +43,7 @@ export function PointsProvider({ children }: { children: ReactNode }) {
     const fetchEduchainPrice = async () => {
       try {
         // Use CryptoCompare API to get the real EDU price
-        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=EDU&tsyms=USD');
+        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=SEI&tsyms=USD');
         const data = await response.json();
         
         if (data && data.USD) {
@@ -52,7 +52,7 @@ export function PointsProvider({ children }: { children: ReactNode }) {
         } else {
           // Fallback price if API doesn't return expected data
           console.warn('EDU price data not available from API, using fallback value');
-          setEduchainPrice(0.1471); // Reasonable fallback value
+          setEduchainPrice(0.170); // Reasonable fallback value
         }
         setIsLoadingPrice(false);
       } catch (error) {
