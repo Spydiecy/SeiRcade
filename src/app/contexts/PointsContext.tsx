@@ -42,22 +42,37 @@ export function PointsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchSeiPrice = async () => {
       try {
-        // Use CryptoCompare API to get the real SEI price
-        const response = await fetch('https://min-api.cryptocompare.com/data/price?fsym=SEI&tsyms=USD');
+        // Try CoinGecko API first for SEI price (more reliable)
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=sei-network&vs_currencies=usd');
         const data = await response.json();
         
-        if (data && data.USD) {
-          // Use the actual price from the API
-          setSeiPrice(data.USD);
+        if (data && data['sei-network'] && data['sei-network'].usd) {
+          // Use the actual price from CoinGecko
+          const price = data['sei-network'].usd;
+          console.log('SEI price from CoinGecko:', price);
+          setSeiPrice(price);
+          setIsLoadingPrice(false);
+          return;
+        }
+        
+        // Fallback to CryptoCompare if CoinGecko fails
+        const backupResponse = await fetch('https://min-api.cryptocompare.com/data/price?fsym=SEI&tsyms=USD');
+        const backupData = await backupResponse.json();
+        
+        if (backupData && backupData.USD) {
+          // Use the price from CryptoCompare
+          const price = backupData.USD;
+          console.log('SEI price from CryptoCompare:', price);
+          setSeiPrice(price);
         } else {
-          // Fallback price if API doesn't return expected data
-          console.warn('SEI price data not available from API, using fallback value');
-          setSeiPrice(0.170); // Reasonable fallback value
+          // Fallback price if both APIs fail
+          console.warn('SEI price data not available from APIs, using fallback value');
+          setSeiPrice(0.25); // Updated reasonable fallback value based on recent market data
         }
         setIsLoadingPrice(false);
       } catch (error) {
         console.error('Error fetching SEI price:', error);
-        setSeiPrice(0.1471); // Fallback price
+        setSeiPrice(0.25); // Updated fallback price
         setIsLoadingPrice(false);
       }
     };

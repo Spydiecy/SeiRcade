@@ -235,7 +235,7 @@ export default function DashboardPage() {
                   
                   {!isLoadingPrice && seiPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
-                      ≈ ${((balance / 1000) * seiPrice).toFixed(2)} USD
+                      ≈ ${((balance / 1000) * seiPrice).toFixed(4)} USD
                     </p>
                   )}
                 </div>
@@ -258,6 +258,7 @@ export default function DashboardPage() {
                   {!isLoadingPrice && seiPrice > 0 && (
                     <p className="text-gray-500 text-sm mt-2">
                       ≈ ${((balance / 1000) * seiPrice).toFixed(2)} USD
+                      <span className="ml-1 text-xs text-gray-600">(1 SEI = ${seiPrice.toFixed(4)} USD)</span>
                     </p>
                   )}
                 </div>
@@ -306,7 +307,8 @@ export default function DashboardPage() {
                       You will receive: {(parseFloat(depositAmount) * 1000).toLocaleString()} Points
                     </p>
                     <p className="text-gray-400">
-                      Value: ${(parseFloat(depositAmount) * seiPrice).toFixed(2)} USD
+                      Value: ${(parseFloat(depositAmount) * seiPrice).toFixed(4)} USD
+                      {seiPrice < 0.05 && " (SEI price may be updating...)"}
                     </p>
                   </div>
                 )}
@@ -346,9 +348,10 @@ export default function DashboardPage() {
                     <p className="text-gray-300">
                       You will receive: {(parseFloat(withdrawAmount) / 1000).toFixed(6)} SEI
                     </p>
-                    {!isLoadingPrice && seiPrice > 0 && (
+                    {!isLoadingPrice && (
                       <p className="text-gray-400">
-                        Value: ${((parseFloat(withdrawAmount) / 1000) * seiPrice).toFixed(2)} USD
+                        Value: ${((parseFloat(withdrawAmount) / 1000) * seiPrice).toFixed(4)} USD
+                        {seiPrice < 0.05 && " (SEI price may be updating...)"}
                       </p>
                     )}
                   </div>

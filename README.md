@@ -1,14 +1,14 @@
-# seiRcade
+# SeiRcade
 
 ![image](https://github.com/user-attachments/assets/cdfc398c-4e01-4369-9eb5-5057eb99a3d8)
 
 ## Play-to-Earn Gaming Platform on Sei Chain
 
-seiRcade is a skill-based competitive gaming platform built on the Sei Chain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of SEI tokens.
+SeiRcade is a skill-based competitive gaming platform built on the Sei Chain where players can earn real rewards through mini-games. Inspired by platforms like MPL and Winzo, our platform enables users to compete in simple yet engaging games with entry fees, creating prize pools where winners earn real value in the form of SEI tokens.
 
 ## 🎮 Project Overview
 
-seiRcade serves as a trustless intermediary, leveraging Sei Chain for transparent and secure prize distribution. Players convert SEI tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
+SeiRcade serves as a trustless intermediary, leveraging Sei Chain for transparent and secure prize distribution. Players convert SEI tokens into platform points, which they use to enter competitive game rooms. After competing in skill-based mini-games, winners receive prize pools (minus a small platform commission).
 
 ### Target Audience
 - Casual gamers looking for competitive play with real rewards
@@ -89,7 +89,7 @@ seiRcade serves as a trustless intermediary, leveraging Sei Chain for transparen
 
 ## 📦 Project Structure
 
-seiRcade follows a modular architecture with clear separation of concerns:
+SeiRcade follows a modular architecture with clear separation of concerns:
 
 ### Frontend Components
 - **UI Components**: Reusable interface elements with arcade-style aesthetics
